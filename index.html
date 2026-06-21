@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crônicos — Dr. Eduardo Novais</title>
+<style>
+  :root{
+    --navy:#1a2550;--gold:#a07830;--gold-light:#c49a40;
+    --bg:#f0f2f7;--gray:#6b7280;--gray-light:#e5e7eb;
+    --red:#dc2626;--yellow:#d97706;--green:#16a34a;
+    --blue:#2563eb;--purple:#7c3aed;--sidebar-w:270px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--navy);display:flex;min-height:100vh;font-size:14px;}
+
+  /* ── SIDEBAR ── */
+  #sidebar{width:var(--sidebar-w);background:var(--navy);color:white;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+  .logo-area{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
+  .logo-star{width:36px;height:36px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:7px;}
+  .logo-area h2{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .logo-area p{font-size:10px;opacity:.55;margin-top:2px;}
+  .unidade-section{padding:12px 12px 8px;border-bottom:1px solid rgba(255,255,255,.08);}
+  .unidade-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.4;margin-bottom:7px;padding-left:3px;}
+  .unidade-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;opacity:.6;transition:all .18s;margin-bottom:3px;border:1.5px solid transparent;}
+  .unidade-btn:hover{opacity:.9;background:rgba(255,255,255,.06);}
+  .unidade-btn.active{opacity:1;background:rgba(255,255,255,.10);border-color:var(--gold);}
+  .u-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+  .u-citta{background:rgba(160,120,48,.3);}.u-riovision{background:rgba(37,99,235,.3);}.u-consultorio{background:rgba(124,58,237,.3);}
+  .u-info small{display:block;font-size:9px;opacity:.5;font-weight:400;margin-top:1px;}
+  nav{padding:10px 0;flex:1;}
+  .nav-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.38;padding:9px 18px 3px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 18px;cursor:pointer;font-size:13px;opacity:.62;transition:all .18s;border-left:3px solid transparent;}
+  .nav-item:hover{opacity:1;background:rgba(255,255,255,.05);}
+  .nav-item.active{opacity:1;background:rgba(255,255,255,.08);border-left-color:var(--gold);}
+  .nav-item .ni{font-size:14px;width:18px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;min-width:18px;text-align:center;}
+
+  /* ── MAIN ── */
+  #main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
+  #topbar{background:white;border-bottom:1px solid var(--gray-light);padding:0 26px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:14px;}
+  .topbar-left{display:flex;align-items:center;gap:10px;}
+  #topbar h1{font-size:16px;font-weight:700;}
+  .unidade-pill{padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;}
+  .pill-citta{background:#fef9ee;color:var(--gold);border:1px solid #f0d98a;}
+  .pill-riovision{background:#eff6ff;color:var(--blue);border:1px solid #bfdbfe;}
+  .pill-consultorio{background:#f5f3ff;color:var(--purple);border:1px solid #ddd6fe;}
+
+  /* SYNC STATUS */
+  #sync-status{font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-weight:600;}
+  .sync-ok{background:#f0fdf4;color:var(--green);}
+  .sync-saving{background:#fffbeb;color:var(--yellow);}
+  .sync-error{background:#fef2f2;color:var(--red);}
+  .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .sync-dot-ok{background:var(--green);}
+  .sync-dot-saving{background:var(--yellow);animation:pulse 1s infinite;}
+  .sync-dot-error{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  #content{padding:22px 26px;flex:1;}
+  .section{display:none;}.section.active{display:block;}
+
+  /* LOADING OVERLAY */
+  #loading-overlay{position:fixed;inset:0;background:rgba(26,37,80,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;color:white;}
+  #loading-overlay.hidden{display:none;}
+  .loading-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading-overlay p{font-size:15px;opacity:.85;}
+
+  /* SUMMARY */
+  .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+  .s-card{background:white;border-radius:9px;padding:14px 16px;border-left:4px solid;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .s-card .sl{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:3px;}
+  .s-card .sv{font-size:26px;font-weight:700;line-height:1;}
+  .s-card .ss{font-size:10px;color:var(--gray);margin-top:3px;}
+
+  /* ALERT BANNERS */
+  .alert-banner{border-radius:9px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:11px;font-size:13px;border:1px solid;}
+  .ab-icon{font-size:17px;flex-shrink:0;}.ab-body{flex:1;}.ab-title{font-weight:700;margin-bottom:2px;}
+  .ab-actions{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;}
+  .alert-overdue{background:#fef2f2;border-color:#fecaca;color:#991b1b;}
+  .alert-upcoming{background:#fffbeb;border-color:#fde68a;color:#92400e;}
+  .alert-confirm{background:#eff6ff;border-color:#bfdbfe;color:#1e40af;}
+  .alert-observe{background:#f0fdf4;border-color:#bbf7d0;color:#166534;}
+
+  /* CARD */
+  .card{background:white;border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;margin-bottom:16px;}
+  .card-header{padding:13px 17px;border-bottom:1px solid var(--gray-light);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .card-header h3{font-size:13px;font-weight:700;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;}
+  thead{background:#f8f9fc;}
+  th{padding:8px 13px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);font-weight:700;}
+  td{padding:10px 13px;border-top:1px solid var(--gray-light);font-size:13px;vertical-align:middle;}
+  tr:hover td{background:#fafbff;}
+
+  /* BADGES */
+  .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-red{background:#fef2f2;color:var(--red);}
+  .badge-yellow{background:#fffbeb;color:var(--yellow);}
+  .badge-green{background:#f0fdf4;color:var(--green);}
+  .badge-blue{background:#eff6ff;color:var(--blue);}
+  .badge-gray{background:#f3f4f6;color:var(--gray);}
+  .badge-gold{background:#fef9ee;color:var(--gold);}
+  .badge-navy{background:#eef1fb;color:var(--navy);}
+  .badge-teal{background:#f0fdfa;color:#0f766e;}
+  .badge-slate{background:#f1f5f9;color:#475569;}
+
+  .lat-od{color:#1d4ed8;font-weight:700;font-size:12px;}
+  .lat-oe{color:#6d28d9;font-weight:700;font-size:12px;}
+  .lat-ao{color:#0369a1;font-weight:700;font-size:12px;}
+
+  /* BTNS */
+  .btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;}
+  .btn-primary{background:var(--gold);color:white;}.btn-primary:hover{background:var(--gold-light);}
+  .btn-outline{background:white;color:var(--navy);border:1.5px solid var(--gray-light);}.btn-outline:hover{border-color:var(--gold);}
+  .btn-sm{padding:4px 9px;font-size:11px;border-radius:5px;}
+  .btn-danger{background:#fef2f2;color:var(--red);border:1px solid #fecaca;}
+  .btn-success{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0;}
+  .btn-info{background:#eff6ff;color:var(--blue);border:1px solid #bfdbfe;}
+  .btn-warn{background:#fffbeb;color:var(--yellow);border:1px solid #fde68a;}
+  .btn-teal{background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;}
+  .btn-slate{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:white;border-radius:11px;width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.22);}
+  .modal-header{padding:16px 20px 12px;border-bottom:1px solid var(--gray-light);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:white;z-index:10;}
+  .modal-header h2{font-size:15px;font-weight:700;}
+  .modal-body{padding:16px 20px;}.modal-footer{padding:13px 20px;border-top:1px solid var(--gray-light);display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;}
+  .close-btn{background:none;border:none;cursor:pointer;font-size:21px;color:var(--gray);line-height:1;}
+
+  /* FORM */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+  .form-group{display:flex;flex-direction:column;gap:4px;}
+  .form-group.full{grid-column:1/-1;}
+  label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;}
+  input,select,textarea{padding:8px 10px;border:1.5px solid var(--gray-light);border-radius:6px;font-size:13px;outline:none;color:var(--navy);background:white;transition:border .18s;width:100%;font-family:inherit;}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+  input[readonly]{background:#f8f9fc;color:var(--gray);}
+  .form-divider{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);border-bottom:1px solid var(--gray-light);padding-bottom:4px;margin:4px 0 0;grid-column:1/-1;}
+
+  /* NEXT DATES */
+  .next-date-box{background:linear-gradient(135deg,#1a2550,#253060);color:white;border-radius:9px;padding:13px 16px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap;}
+  .ndb-item{text-align:center;}
+  .ndb-item .ndb-l{font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+  .ndb-item .ndb-d{font-size:14px;font-weight:700;}
+  .ndb-item .ndb-w{font-size:9px;opacity:.65;margin-top:1px;}
+  .ndb-sep{width:1px;background:rgba(255,255,255,.15);align-self:stretch;}
+
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
+  .detail-item .di-l{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.4px;}
+  .detail-item .di-v{font-size:13px;font-weight:600;margin-top:2px;}
+
+  .inject-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-light);gap:10px;}
+  .inject-row:last-child{border:none;}
+
+  .agenda-day{margin-bottom:16px;}
+  .agenda-day-label{font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+  .agenda-item{background:white;border-radius:7px;padding:10px 14px;border-left:4px solid;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 2px rgba(0,0,0,.04);gap:10px;}
+
+  .filter-bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:13px;}
+  .filter-bar select,.filter-bar input{width:auto;padding:6px 10px;}
+  .toggle-group{display:flex;gap:3px;}
+  .toggle-btn{padding:5px 13px;border-radius:5px;border:1.5px solid var(--gray-light);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--gray);transition:all .18s;font-family:inherit;}
+  .toggle-btn.active{background:var(--navy);color:white;border-color:var(--navy);}
+
+  #toast-container{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:7px;}
+  .toast{background:var(--navy);color:white;padding:11px 16px;border-radius:7px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:300px;border-left:4px solid var(--gold);}
+  @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--gray);}
+  .empty .ei{font-size:36px;display:block;margin-bottom:9px;}
+  .flex-gap{display:flex;gap:9px;align-items:center;}
+  .info-box{background:#f0fdf4;border-radius:7px;padding:9px 11px;font-size:12px;}
+
+  /* ── GRUPOS DE PACIENTES ── */
+  .grupo-section{margin-bottom:14px;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .grupo-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;cursor:pointer;user-select:none;transition:filter .15s;}
+  .grupo-header:hover{filter:brightness(.97);}
+  .grupo-header-left{display:flex;align-items:center;gap:10px;}
+  .grupo-header h3{font-size:14px;font-weight:700;margin:0;}
+  .grupo-count{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
+  .grupo-chevron{font-size:13px;transition:transform .2s;opacity:.6;}
+  .grupo-chevron.open{transform:rotate(180deg);}
+  .grupo-body{background:white;display:none;}
+  .grupo-body.open{display:block;}
+  .grupo-desc{font-size:11px;opacity:.75;margin-top:1px;}
+
+  /* cores por grupo */
+  .grupo-urgente  .grupo-header{background:#fef2f2;border-left:4px solid var(--red);}
+  .grupo-urgente  .grupo-count{background:#fecaca;color:var(--red);}
+  .grupo-auth     .grupo-header{background:#fffbeb;border-left:4px solid var(--yellow);}
+  .grupo-auth     .grupo-count{background:#fde68a;color:#92400e;}
+  .grupo-agendar  .grupo-header{background:#eff6ff;border-left:4px solid var(--blue);}
+  .grupo-agendar  .grupo-count{background:#bfdbfe;color:#1e40af;}
+  .grupo-ok       .grupo-header{background:#f0fdf4;border-left:4px solid var(--green);}
+  .grupo-ok       .grupo-count{background:#bbf7d0;color:#166534;}
+  .grupo-obs      .grupo-header{background:#f0fdfa;border-left:4px solid #0f766e;}
+  .grupo-obs      .grupo-count{background:#99f6e4;color:#0f766e;}
+  .grupo-semdata  .grupo-header{background:#f8f9fc;border-left:4px solid var(--gray);}
+  .grupo-semdata  .grupo-count{background:#e5e7eb;color:var(--gray);}
+  .grupo-inativos .grupo-header{background:#f1f5f9;border-left:4px solid #94a3b8;}
+  .grupo-inativos .grupo-count{background:#cbd5e1;color:#475569;}
+
+  /* ── TELA INICIAL ── */
+  #tela-inicial{position:fixed;inset:0;background:var(--navy);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  #tela-inicial.hidden{display:none;}
+  .ti-logo{text-align:center;margin-bottom:36px;}
+  .ti-logo .ti-star{width:56px;height:56px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;}
+  .ti-logo h1{color:white;font-size:22px;font-weight:700;letter-spacing:.5px;}
+  .ti-logo p{color:rgba(255,255,255,.55);font-size:13px;margin-top:4px;}
+  .ti-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:680px;width:100%;}
+  .ti-card{background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;color:white;}
+  .ti-card:hover{background:rgba(255,255,255,.13);border-color:var(--gold);transform:translateY(-2px);}
+  .ti-card .ti-icon{font-size:38px;margin-bottom:14px;display:block;}
+  .ti-card .ti-img{width:56px;height:56px;object-fit:contain;margin:0 auto 14px;display:block;filter:brightness(0) invert(1);}
+  .ti-card h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+  .ti-card small{font-size:11px;opacity:.55;}
+  @media(max-width:600px){
+    .ti-grid{grid-template-columns:1fr;max-width:320px;}
+    .ti-card{padding:20px 16px;display:flex;align-items:center;gap:16px;text-align:left;}
+    .ti-card .ti-icon,.ti-card .ti-img{margin:0;font-size:28px;width:40px;height:40px;}
+  }
+
+  /* ── SENHA ── */
+  #senha-overlay{position:fixed;inset:0;background:var(--navy);z-index:9999;display:flex;align-items:center;justify-content:center;}
+  #senha-overlay.hidden{display:none;}
+  .senha-box{background:white;border-radius:16px;padding:36px 32px;width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .senha-logo{font-size:36px;margin-bottom:4px;}
+  .senha-box h2{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+  .senha-box p{font-size:13px;color:var(--gray);margin-bottom:20px;}
+  .senha-unidade{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:20px;}
+  .senha-input{width:100%;padding:12px 14px;border:2px solid var(--gray-light);border-radius:8px;font-size:16px;text-align:center;letter-spacing:4px;outline:none;font-family:inherit;}
+  .senha-input:focus{border-color:var(--gold);}
+  .senha-btn{width:100%;margin-top:12px;padding:12px;background:var(--gold);color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;}
+  .senha-btn:hover{background:var(--gold-light);}
+  .senha-erro{color:var(--red);font-size:13px;margin-top:8px;min-height:20px;}
+
+  /* ── VOZ ── */
+  .voz-card{background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:28px;margin-bottom:18px;}
+  .voz-mic-btn{width:100px;height:100px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 20px;transition:all .2s;box-shadow:0 4px 20px rgba(160,120,48,.4);}
+  .voz-mic-btn:hover{transform:scale(1.06);background:var(--gold-light);}
+  .voz-mic-btn.recording{background:var(--red);animation:micPulse 1s infinite;box-shadow:0 4px 20px rgba(220,38,38,.5);}
+  @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .voz-transcript{width:100%;min-height:80px;padding:12px 14px;border:2px solid var(--gray-light);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;outline:none;transition:border .2s;}
+  .voz-transcript:focus{border-color:var(--gold);}
+  .voz-status{text-align:center;font-size:13px;color:var(--gray);margin:10px 0;min-height:20px;}
+  .voz-resultado{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 18px;margin-top:14px;}
+  .voz-resultado.erro{background:#fef2f2;border-color:#fecaca;}
+  .voz-resultado .vr-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:10px;}
+  .voz-resultado.erro .vr-title{color:var(--red);}
+  .voz-campo{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+  .voz-campo:last-child{border:none;}
+  .voz-campo .vc-label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;width:140px;flex-shrink:0;}
+  .voz-campo .vc-val{font-size:14px;font-weight:600;color:var(--navy);}
+  .voz-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .voz-hint{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;line-height:1.6;}
+  @media(max-width:640px){
+    .voz-card{padding:18px 14px;}
+    .voz-mic-btn{width:120px;height:120px;font-size:48px;}
+    .voz-campo .vc-label{width:100px;font-size:10px;}
+    .voz-actions .btn{flex:1;justify-content:center;}
+  }
+</style>
+</head>
+<body>
+
+<!-- TELA INICIAL — SELEÇÃO DE UNIDADE -->
+<div id="tela-inicial">
+  <div class="ti-logo">
+    <div class="ti-star">✦</div>
+    <h1>Dr. Eduardo Novais</h1>
+    <p>Gestão de Pacientes Crônicos · Selecione a unidade</p>
+  </div>
+  <div class="ti-grid">
+    <div class="ti-card" onclick="selecionarUnidadeInicial('citta')">
+      <span class="ti-icon">🏥</span>
+      <h3>Oftalmo Città</h3>
+      <small>Terças · manhã</small>
+    </div>
+    <div class="ti-card" onclick="selecionarUnidadeInicial('riovision')">
+      <span class="ti-icon">👁️</span>
+      <h3>Rio Vision</h3>
+      <small>Quintas · manhã</small>
+    </div>
+    <div class="ti-card" onclick="selecionarUnidadeInicial('consultorio')">
+      <span class="ti-icon">🩺</span>
+      <h3>Consultório Particular</h3>
+      <small>Terças · manhã</small>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" class="hidden">
+  <div class="loading-spinner"></div>
+  <p id="loading-msg">Conectando ao banco de dados...</p>
+</div>
+
+<!-- SENHA OVERLAY -->
+<div id="senha-overlay" class="hidden">
+  <div class="senha-box">
+    <div class="senha-logo">🔐</div>
+    <h2 id="senha-titulo">Acesso Restrito</h2>
+    <p>Digite a senha para acessar esta unidade</p>
+    <span class="senha-unidade" id="senha-unidade-label"></span>
+    <input class="senha-input" type="password" id="senha-input" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')verificarSenha()">
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <div class="senha-erro" id="senha-erro"></div>
+    <button id="senha-voltar-btn" onclick="cancelarSenha()" style="display:none;margin-top:12px;width:100%;padding:10px;background:none;border:1.5px solid var(--gray-light);border-radius:8px;font-size:14px;font-weight:600;color:var(--gray);cursor:pointer;">← Voltar para seleção de unidade</button>
+  </div>
+</div>
+
+<!-- CONFIG — COLE A URL DO WEB APP AQUI -->
+<script>
+  // ⚠️ APÓS PUBLICAR O APPS SCRIPT, COLE A URL AQUI:
+  const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxM9j9badat5qF_H1ODhgFyIAvpPlLClm07PUGbMJXKmX0SirWIY6iPyZvlAyk3Clfg/exec';
+  // Exemplo: 'https://script.google.com/macros/s/AKfy.../exec'
+</script>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="logo-area">
+    <div class="logo-star">✦</div>
+    <h2>Dr. Eduardo Novais</h2>
+    <p>Retina Clínica &amp; Cirúrgica</p>
+  </div>
+  <div class="unidade-section">
+    <div class="unidade-label">Unidade ativa</div>
+    <div class="unidade-btn active" id="u-citta" onclick="setUnidade('citta')">
+      <div class="u-icon u-citta" style="background:transparent;padding:0;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACMAAAAgCAYAAACYTcH3AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAHAUlEQVR4nM2Xe4xUVxnAf9+59877uU9YXKAIggj1sQioKQTtthGtNoHaJtCaaEwqmpQY00b7hzap8RGNaSL+QTVNGiPF2ISipLWWNmlFqgUf3RK6QOmyPJbdZdllZnd2Hvee4x/37szO7C6wNiaeZDKZM+d83+9853wvMcYY/k+G/d9sMkZjjEEQRKkZ8wAiChGZl1yZj2WM9hBlzZzHB2scWnvzgropy1RPG4BcOttD39t/Y/B8L+Njw7iVEsqyiSWyNC9cyvuWf4TOFeuIxlPBIXSdBecaN7SMMRoRX9DJYy9y7PBvGeh7i0qpiCiFsmz/5MagtedbQ1mkmxayal0362/fSTLbflNA14WZEpAfG+KF3/yAU/98Gct2CIWjiCj8jcZfJwqE6nW5bpny5ATJbDtbtu9m7SfuqjvYvGCmQAbP9/Lsnt2MDV8gmshgAuXTLRdLNlMsXMNoDwIYEUGUhVspUZqc4LYvPMjmu7+J1h5qlncHMCumMT7IyGAf+5/YRX50kGgyi9ZeHYiIoD2PjlvWYDthjDbTZBi052JZNvFkllcP7OEvf9yLUlYAfTMwgaEq5SIHn/wOE7kRQtEE2nNnFWCMpn3xShwngjG6apk6KK2Jp5t59cAvONPzGqKsukPNCaONQURx9Plfc/GdfxONpRpATN29iyhaO5bjRGJorRFhlndhwIDthDj8u59RLhVAxJ+fC8YYg1KK3NXLHH9lP5F4Gs+rN6koi3KpgIhgAMt2yLYvJhJNYoyHUravzCets6ATjjF88TRvvX7Iv+IG6zTA+H/2HP0DhdwIluXU6EXQnkssmWX1+s9SKk7glouEY0lSTQuIpbIYbRjPXWHp6o20L/kgbrlYF/CM1thOmBOvH/IjeIMF634pURhjONPzmv8gzTRyY7DsEFcvnyPTsoh7H/ollhPGaI3jRHBCUYqFHN33PcxHN29n4GxPIGP6o9Y4oQhDF04xOtTvW3eaDlVbaECE/OggVy/3+YqCORGFKD+sRxMZjhzaSySW5GuPPcv67vsBWPHhzex85Cm6ttzHS/t+AiJYlhPsq6UEpSxKk3ku95+s6Q1GLR0EisdGLlKaHCcUjmGMxnNdtFvB89yqS3puhWd+/nW+8ePn2XDHAxhjWNXVDcAzT+xioO8E0USa4kQOpSyUZWHZDspygusyXB3sp3FUYfxkB8WJnO89IghCKttOMttOMttGMtNGIt1KItNKLJlFlBUEMVXN2Ju+uIuPbdrOeG6E8bFh8mND/md0kPGxYTAaBCbHx+aGqbuuAA/AdsJE42kSmTbSLYtINS0gmfZhLNsJ1vpuKgjp5g6cUBQnEsd2wogInluhVMgjoqoeZJgZ+KswUzklEk344dr4YFcHzzF88XRwTbVkF01kePDxg8RTzTXPEDiw9xFO/+sVQuEYnltBRFCWjWU7WHYIy7LBQDSWmgEzLXr5X6mmBTiRWPWV206IcCxJPNlEIt1CIt0KxrD1y98nFInz9vE/IyL0nzrG0IVT3PWVx0lm2ghHEyQyrcRTzUTiKZxQpObmImTbOueGmfL5VHMH6eYO3Eo5cD0/MWrtAYZCfoR1t++gZeEyfvXYPby0/6cAvHnkIE9+bxuX+05wx47vUi4VMEFJYXStAtTaIxyNs2DJ6kCvzISZWmhZNos/0IVbKTUEJcGtlMm0dmI7YZ7+4f2MDp5DlMJzK7iVImD4/Z7d9Pe+QeeKLioNQU9EUSkXaetcSfOCpTMCXx3M1Lv50IatWLZDfXVhqqng+Mv7MEYTiSUpFnLkxwaZyI1g2SGi8TRvHnmOK5fOzAh6ohRepcStn7rbr4fMddKBBC66aNmtvH/tbRQLubraQ0RwyyX//pWFMeC5ZUaHzlMs5KsRNRxJ4FbKNMouFydoX7KaNeu3VvPgnDDTx5ZtDxGKxPE8t8HU/jvCGET8ADZ86R3KxYJfq5ipUnVaKTGtLO2+92HsUDgoVerLjRkwIgqjNS0Ll3HnzkcpTear87MNEWHwfG+QFBWNZYGIoEQxkR/l0/d8iyWrPh7UyTPlzapBlEJrj7UbP8+dOx6lWMjjuWWUZTeUBX6uGXi3J3jwDSe1bLTnUhgfZcu23WzofuC6Zed1C/Kpjb3/OMyL+35EbmSAcDRRjbz+VlNLqEjwDZ7nUprMk0i38pkvfZs1Gz93ww7hxq1K0HqMXxvm6AtPcfLvfyI/NoQIWJZTbVVM8CY818UYj1iyiVVd3Xxy61dJN3e891alBlQTNH7tCmdP/JX+3je4MvAuk/lRXLeMsiwisRRNbYvpXNnF8rWbyLQsmrH/PcNAcCVGz2hvy8UJH0bZhCPx+t5b66Aeurn2dl699hSUMRqB2fturf1y5H/d+M9BV3Xm+SpvHP8B2PiBR07sZ8AAAAAASUVORK5CYII=" alt="Città" style="width:26px;height:26px;object-fit:contain;"></div>
+      <div class="u-info">Oftalmo Città<small>Terças · manhã</small></div>
+    </div>
+    <div class="unidade-btn" id="u-riovision" onclick="setUnidade('riovision')">
+      <div class="u-icon u-riovision" style="background:transparent;padding:0;"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAgADcDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD7LooqlrupW+j6NeapdnEFpC0z+pCjOB7noPc00m3ZCbSV2Vr7Vrlb2a107TzfPbIGuP3wj2k8hFyPmcjnBwACMkZFXtMvbfUbGG9tXLQyruUkYI9QR2IOQR2INcn4QvdZ/wCEft3tdDlnurkfabue8k+yo00nzMACrOQM7RlQMKMVQ0fxHdeHdR1LR9a0i6XUb68kvNKtLQ+et0jbd6xyYUAq5Zm3hdocHpXU8O3eMd1579/67bnKsQlaUtn5bdtf612PQ6K4j+3b+YhtQ1y005mAZbfT7f7SUBBK5lYbXzhhlVAypGTipW1zVNJgj1KW6i1/RGkWOee3g23NruIAcouRInIJwFYA7sMKj6tLbr/XyL+sx36f18zsqKKK5zoM/XdT/s22RorSe8uZn8q3ghXl3IJ5boigAkseAB3OAatjo809xHqGuzR3d2hDRQoD9ntj/sKfvN/ttz6bRxW1RVqdlZEOF3dhWPq+k+Y91fWmPt08KweZJI48uIHJVChBUk88EZIGegrYopRk4u6HKKkrM8+0u80iwk8zULMzQTqzLcBVZVcHEiMAThweGyScjvziKwuZbNbt7aS5skvZglqiyxxPIwJyqGVSm7nGCQTj8T1zeHbFb9by1aa0bzI3kSF8RyKgkwhXoFzIzHGMnk1BpPhi2tbcRX1zNqZa3jgnW5AaOYxn5JGQgjeBgbu+BnoK7Pb09WcaoVLpF/w5HPFo0C3L6g0xBZvtzRtMCSThjH8vHt2xRWhRXFJ3dztirKx//9k=" alt="Rio Vision" style="width:26px;height:26px;object-fit:contain;"></div>
+      <div class="u-info">Rio Vision<small>Quintas · manhã</small></div>
+    </div>
+    <div class="unidade-btn" id="u-consultorio" onclick="setUnidade('consultorio')">
+      <div class="u-icon u-consultorio" style="background:transparent;padding:0;"><img src="data:image/png;base64,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" alt="Particular" style="width:26px;height:26px;object-fit:contain;"></div>
+      <div class="u-info">Consultório Particular<small>Terças · manhã</small></div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-lbl">Menu</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')"><span class="ni">📊</span> Dashboard<span class="nav-badge" id="nb-dashboard" style="display:none">0</span></div>
+    <div class="nav-item" id="nav-pacientes" onclick="navigate('pacientes')"><span class="ni">👥</span> Pacientes</div>
+    <div class="nav-item" id="nav-alertas" onclick="navigate('alertas')"><span class="ni">🔔</span> Alertas<span class="nav-badge" id="nb-alertas" style="display:none">0</span></div>
+    <div class="nav-item" id="nav-agenda" onclick="navigate('agenda')"><span class="ni">📅</span> Agenda</div>
+    <div class="nav-item" id="nav-autorizacoes" onclick="navigate('autorizacoes')"><span class="ni">📋</span> Autorizações<span class="nav-badge" id="nb-auth" style="display:none">0</span></div>
+    <div class="nav-item" id="nav-voz" onclick="navigate('voz')"><span class="ni">🎙️</span> Comando de Voz</div>
+  </nav>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Dashboard</h1>
+      <span id="unidade-pill" class="unidade-pill pill-citta">Oftalmo Città</span>
+    </div>
+    <div class="flex-gap">
+      <div id="sync-status" class="sync-ok"><span class="sync-dot sync-dot-ok"></span>Sincronizado</div>
+      <span id="topbar-date" style="font-size:11px;color:var(--gray)"></span>
+      <button class="btn btn-primary" onclick="openModal('modal-novo')">+ Novo Paciente</button>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="section active" id="section-dashboard">
+      <div class="summary-grid">
+        <div class="s-card" style="border-color:var(--navy)"><div class="sl">Total Ativos</div><div class="sv" id="stat-total">—</div><div class="ss">em tratamento</div></div>
+        <div class="s-card" style="border-color:var(--red)"><div class="sl">Atrasados</div><div class="sv" id="stat-atrasados" style="color:var(--red)">—</div><div class="ss">passaram do prazo</div></div>
+        <div class="s-card" style="border-color:var(--yellow)"><div class="sl">Esta semana</div><div class="sv" id="stat-semana" style="color:var(--yellow)">—</div><div class="ss">próximas injeções</div></div>
+        <div class="s-card" style="border-color:#0f766e"><div class="sl">Observação</div><div class="sv" id="stat-observe" style="color:#0f766e">—</div><div class="ss">sem injeção/OCT</div></div>
+        <div class="s-card" style="border-color:var(--green)"><div class="sl">Em dia</div><div class="sv" id="stat-emdia" style="color:var(--green)">—</div><div class="ss">sem pendências</div></div>
+      </div>
+      <div id="dash-alertas-container"></div>
+      <div class="card"><div class="card-header"><h3>⚡ Atenção Imediata</h3></div><div id="dash-urgentes"></div></div>
+      <div class="card"><div class="card-header"><h3>📅 Próximos 14 dias</h3></div><div id="dash-proximos"></div></div>
+    </div>
+
+    <div class="section" id="section-pacientes">
+      <div class="filter-bar">
+        <input style="min-width:200px" type="text" placeholder="🔍 Buscar paciente..." oninput="renderPacientes()" id="search-pac">
+        <select onchange="renderPacientes()" id="filt-tipo">
+          <option value="">Convênio + Particular</option>
+          <option value="convenio">Só Convênio</option>
+          <option value="particular">Só Particular</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="toggleModoGrupos()" id="btn-modo-grupos">☰ Ver lista simples</button>
+        <button class="btn btn-outline btn-sm" onclick="recarregarDados()">🔄 Atualizar</button>
+        <span id="count-pac" style="font-size:11px;color:var(--gray);margin-left:4px"></span>
+      </div>
+      <div id="table-pac"></div>
+    </div>
+
+    <div class="section" id="section-alertas"><div id="alertas-content"></div></div>
+
+    <div class="section" id="section-agenda">
+      <div class="filter-bar">
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setView('semana',this)">Esta semana</button>
+          <button class="toggle-btn" onclick="setView('mes',this)">Este mês</button>
+        </div>
+        <select id="filt-agenda-tipo" onchange="renderAgenda()"><option value="">Todos procedimentos</option><option value="injecao">Injeções</option><option value="consulta">Consultas</option><option value="oct">OCT</option></select>
+      </div>
+      <div id="agenda-content"></div>
+    </div>
+
+    <div class="section" id="section-autorizacoes">
+      <div class="card"><div class="card-header"><h3>📋 Controle de Autorizações — Convênio</h3></div><div id="table-auth"></div></div>
+    </div>
+
+    <!-- VOZ -->
+    <div class="section" id="section-voz">
+      <div id="voz-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOVO PACIENTE ══ -->
+<div class="modal-overlay" id="modal-novo">
+  <div class="modal">
+    <div class="modal-header"><h2>➕ Novo Paciente Crônico</h2><button class="close-btn" onclick="closeModal('modal-novo')">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-divider">Dados do Paciente</div>
+      <div class="form-group full"><label>Nome completo</label><input type="text" id="np-nome" placeholder="Nome do paciente"></div>
+      <div class="form-group"><label>Data de nascimento</label><input type="date" id="np-nasc"></div>
+      <div class="form-group"><label>Telefone</label><input type="tel" id="np-tel" placeholder="(21) 99999-9999"></div>
+      <div class="form-group"><label>Tipo</label><select id="np-tipo" onchange="toggleConv('np')"><option value="convenio">Convênio</option><option value="particular">Particular</option></select></div>
+      <div class="form-group" id="np-fc-conv"><label>Convênio</label><input type="text" id="np-conv" placeholder="Ex: Unimed, Bradesco..."></div>
+      <div class="form-group" id="np-fc-cart"><label>Nº Carteirinha</label><input type="text" id="np-cart"></div>
+      <div class="form-divider">Diagnóstico & Protocolo</div>
+      <div class="form-group"><label>Diagnóstico</label><select id="np-diag"><option value="DMRI">DMRI</option><option value="EMD">Edema Macular Diabético</option><option value="OVCR">Oclusão Veia Central Retina</option><option value="ORVR">Oclusão Ramo Veia Retina</option><option value="mCNV">Neovascularização Coroidal Miópica</option><option value="RD">Retinopatia Diabética</option></select></div>
+      <div class="form-group"><label>Lateralidade</label><select id="np-lat"><option value="OD">OD — Olho Direito</option><option value="OE">OE — Olho Esquerdo</option><option value="AO">AO — Ambos</option></select></div>
+      <div class="form-group"><label>Medicação</label><select id="np-med"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg — Aflibercept</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg — Aflibercept HD</option><option value="Vabysmo (Faricimabe)">Vabysmo — Faricimabe</option><option value="Avastin (Bevacizumab)">Avastin — Bevacizumab</option><option value="Ozurdex (Dexametasona)">Ozurdex — Dexametasona</option></select></div>
+      <div class="form-group"><label>Protocolo</label><select id="np-proto"><option value="3-carregamento">3 doses carregamento</option><option value="4-carregamento">4 doses carregamento (Faricimabe)</option><option value="tratar-estender">Tratar e estender</option><option value="prn">PRN</option><option value="fixo">Intervalo fixo</option></select></div>
+      <div class="form-group"><label>Intervalo</label><select id="np-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+      <div class="form-group"><label>Data da 1ª aplicação</label><input type="date" id="np-data1"></div>
+      <div class="form-group"><label>Médico</label><select id="np-medico"><option value="Dr. Eduardo Novais">Dr. Eduardo Novais</option><option value="Dra. Lais Maia">Dra. Lais Maia</option><option value="Dr. Pedro Faria">Dr. Pedro Faria</option></select></div>
+      <div class="form-group full"><label>Observações</label><textarea id="np-obs" rows="2"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-novo')">Cancelar</button><button class="btn btn-primary" onclick="salvarNovoPaciente()">Salvar Paciente</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL DETALHE ══ -->
+<div class="modal-overlay" id="modal-det">
+  <div class="modal" style="width:700px">
+    <div class="modal-header"><h2 id="det-titulo">Detalhes</h2><button class="close-btn" onclick="closeModal('modal-det')">×</button></div>
+    <div class="modal-body" id="det-body"></div>
+    <div class="modal-footer" id="det-footer"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR ══ -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal" style="width:640px">
+    <div class="modal-header"><h2>✏️ Editar Ficha</h2><button class="close-btn" onclick="closeModal('modal-editar')">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-divider">Dados Pessoais</div>
+      <div class="form-group full"><label>Nome</label><input type="text" id="ed-nome"></div>
+      <div class="form-group"><label>Nascimento</label><input type="date" id="ed-nasc"></div>
+      <div class="form-group"><label>Telefone</label><input type="tel" id="ed-tel"></div>
+      <div class="form-group"><label>Tipo</label><select id="ed-tipo" onchange="toggleConv('ed')"><option value="convenio">Convênio</option><option value="particular">Particular</option></select></div>
+      <div class="form-group" id="ed-fc-conv"><label>Convênio</label><input type="text" id="ed-conv"></div>
+      <div class="form-group" id="ed-fc-cart"><label>Carteirinha</label><input type="text" id="ed-cart"></div>
+      <div class="form-divider">Diagnóstico & Protocolo</div>
+      <div class="form-group"><label>Diagnóstico</label><select id="ed-diag"><option value="DMRI">DMRI</option><option value="EMD">Edema Macular Diabético</option><option value="OVCR">Oclusão Veia Central Retina</option><option value="ORVR">Oclusão Ramo Veia Retina</option><option value="mCNV">Neovascularização Coroidal Miópica</option><option value="RD">Retinopatia Diabética</option></select></div>
+      <div class="form-group"><label>Lateralidade</label><select id="ed-lat"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO</option></select></div>
+      <div class="form-group"><label>Medicação</label><select id="ed-med"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg</option><option value="Vabysmo (Faricimabe)">Vabysmo</option><option value="Avastin (Bevacizumab)">Avastin</option><option value="Ozurdex (Dexametasona)">Ozurdex</option></select></div>
+      <div class="form-group"><label>Protocolo</label><select id="ed-proto"><option value="3-carregamento">3 doses carregamento</option><option value="4-carregamento">4 doses carregamento</option><option value="tratar-estender">Tratar e estender</option><option value="prn">PRN</option><option value="fixo">Intervalo fixo</option></select></div>
+      <div class="form-group"><label>Intervalo</label><select id="ed-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+      <div class="form-group"><label>Doses carregamento feitas</label><select id="ed-doses"><option value="0">0</option><option value="1">1ª feita</option><option value="2">2ª feita</option><option value="3">3ª feita (completo 3d)</option><option value="4">4ª feita (completo 4d)</option></select></div>
+      <div class="form-group"><label>Médico</label><select id="ed-medico"><option value="Dr. Eduardo Novais">Dr. Eduardo Novais</option><option value="Dra. Lais Maia">Dra. Lais Maia</option><option value="Dr. Pedro Faria">Dr. Pedro Faria</option></select></div>
+      <div class="form-group full"><label>Observações</label><textarea id="ed-obs" rows="2"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-editar')">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicao()">Salvar Alterações</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL INJEÇÃO ══ -->
+<div class="modal-overlay" id="modal-inj">
+  <div class="modal" style="width:580px">
+    <div class="modal-header"><h2>💉 Registrar Injeção</h2><button class="close-btn" onclick="closeModal('modal-inj')">×</button></div>
+    <div class="modal-body">
+      <div id="inj-loading-banner" style="display:none;margin-bottom:12px"></div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Paciente</label><input type="text" id="inj-pac" readonly></div>
+        <div class="form-divider">Esta Aplicação</div>
+        <div class="form-group"><label>Data</label><input type="date" id="inj-data"></div>
+        <div class="form-group"><label>Olho(s) tratado(s)</label><select id="inj-olho"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO — Ambos</option></select></div>
+        <div class="form-group full"><label>Medicação utilizada</label><select id="inj-med" onchange="onMedChange()"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg — Aflibercept</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg — Aflibercept HD</option><option value="Vabysmo (Faricimabe)">Vabysmo — Faricimabe</option><option value="Avastin (Bevacizumab)">Avastin — Bevacizumab</option><option value="Ozurdex (Dexametasona)">Ozurdex — Dexametasona</option></select></div>
+        <div id="inj-troca-aviso" style="display:none;grid-column:1/-1"><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:8px 11px;font-size:12px;color:#92400e">⚠️ <strong>Troca de medicação</strong> — ficha será atualizada.</div></div>
+        <div class="form-divider">Próximo Ciclo</div>
+        <div class="form-group full" id="inj-carregamento-aviso" style="display:none"></div>
+        <div class="form-group"><label>Próximo intervalo</label><select id="inj-prox" onchange="atualizarInfoInj()"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+        <div class="form-group"><label>Olho(s) próxima injeção</label><select id="inj-prox-olho"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO</option></select></div>
+        <div class="form-group full" id="inj-info"></div>
+        <div class="form-divider">Checklist</div>
+        <div class="form-group full"><label>Observações</label><textarea id="inj-obs" rows="2" placeholder="Resposta ao tratamento, AV..."></textarea></div>
+        <div class="form-group full"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;text-transform:none;font-size:13px;font-weight:600"><input type="checkbox" id="inj-rel" style="width:auto"> Relatório gerado e autorização solicitada</label></div>
+        <div class="form-group full"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;text-transform:none;font-size:13px;font-weight:600"><input type="checkbox" id="inj-oct" style="width:auto"> OCT solicitado para próxima consulta</label></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-inj')">Cancelar</button><button class="btn btn-primary" onclick="salvarInjecao()">Salvar Injeção</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIRMAR ══ -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="width:460px">
+    <div class="modal-header"><h2>✅ Confirmar Injeção Realizada</h2><button class="close-btn" onclick="closeModal('modal-confirm')">×</button></div>
+    <div class="modal-body">
+      <p style="margin-bottom:12px;color:var(--gray);font-size:13px">Paciente confirma que realizou. Informe o intervalo para calcular as próximas datas automaticamente.</p>
+      <div class="form-grid">
+        <div class="form-group full"><label>Paciente</label><input type="text" id="conf-pac" readonly></div>
+        <div class="form-group"><label>Data realizada</label><input type="date" id="conf-data"></div>
+        <div class="form-group"><label>Próximo intervalo</label><select id="conf-prox"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+        <div class="form-group full" id="conf-info"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-confirm')">Cancelar</button><button class="btn btn-success" onclick="salvarConfirmacao()">✓ Confirmar e Agendar</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL OBSERVAÇÃO ══ -->
+<div class="modal-overlay" id="modal-observacao">
+  <div class="modal" style="width:500px">
+    <div class="modal-header"><h2>🔍 Protocolo de Observação</h2><button class="close-btn" onclick="closeModal('modal-observacao')">×</button></div>
+    <div class="modal-body">
+      <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#0f766e"><strong>Observar e Estender.</strong> Sem injeção — apenas OCT + consulta para reavaliação.</div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Paciente</label><input type="text" id="obs-pac" readonly></div>
+        <div class="form-group"><label>Última injeção</label><input type="date" id="obs-ultinj"></div>
+        <div class="form-group"><label>Intervalo próximo OCT</label><select id="obs-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option><option value="16">16 semanas</option><option value="24">24 semanas (6 meses)</option></select></div>
+        <div class="form-group full" id="obs-info"></div>
+        <div class="form-group full"><label>Motivo / observação</label><textarea id="obs-motivo" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-observacao')">Cancelar</button><button class="btn btn-teal" onclick="salvarObservacao()">✓ Iniciar Observação</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL INATIVAR ══ -->
+<div class="modal-overlay" id="modal-inativar">
+  <div class="modal" style="width:460px">
+    <div class="modal-header"><h2 id="inat-titulo">Inativar Paciente</h2><button class="close-btn" onclick="closeModal('modal-inativar')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Paciente</label><input type="text" id="inat-pac" readonly></div>
+        <div class="form-group full"><label>Motivo</label><select id="inat-motivo" onchange="updateInatMotivo()"><option value="perdido">Perda de seguimento</option><option value="obito">Óbito</option><option value="transferencia">Transferência</option><option value="alta">Alta médica definitiva</option><option value="outro">Outro</option></select></div>
+        <div class="form-group"><label>Data</label><input type="date" id="inat-data"></div>
+        <div class="form-group full"><label>Observação</label><textarea id="inat-obs" rows="2"></textarea></div>
+      </div>
+      <div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:10px 13px;font-size:12px;color:#991b1b">⚠️ O paciente sairá da fila ativa. Pode ser reativado depois.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-inativar')">Cancelar</button><button class="btn btn-danger" id="inat-btn" onclick="salvarInativacao()">Confirmar</button></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════
+// CONFIGURAÇÃO
+// ════════════════════════════════════════════════════
+const UNIDADES = {
+  citta:       { nome:'Oftalmo Città',          diaSemana:2, diaLabel:'terça-feira',  pill:'pill-citta' },
+  riovision:   { nome:'Rio Vision',             diaSemana:4, diaLabel:'quinta-feira', pill:'pill-riovision' },
+  consultorio: { nome:'Consultório Particular', diaSemana:2, diaLabel:'terça-feira',  pill:'pill-consultorio' }
+};
+
+const LOADING_DOSES = {
+  'Eylia 2mg (Aflibercept)':3,'Eylia 8mg (Aflibercept HD)':3,
+  'Avastin (Bevacizumab)':3,'Ozurdex (Dexametasona)':3,'Vabysmo (Faricimabe)':4
+};
+
+let unidadeAtual = localStorage.getItem('unidade_atual') || 'citta';
+let agendaView   = 'semana';
+let currentId    = null;
+let pacientesCache = []; // cache local para velocidade
+
+// ════════════════════════════════════════════════════
+// API — comunicação com o Apps Script
+// ════════════════════════════════════════════════════
+async function apiGet(params) {
+  const url = WEBAPP_URL + '?' + new URLSearchParams(params);
+  const r = await fetch(url);
+  return r.json();
+}
+
+async function apiPost(body) {
+  // Compactar o paciente antes de enviar — remover campos que o Apps Script
+  // pode reconstruir, para manter a URL dentro do limite
+  if(body.paciente) {
+    const p = body.paciente;
+    // Garantir que injecoes é array (não string)
+    if(typeof p.injecoes === 'string') {
+      try { p.injecoes = JSON.parse(p.injecoes); } catch(e) { p.injecoes = []; }
+    }
+  }
+
+  const jsonStr = JSON.stringify(body);
+  const encoded = encodeURIComponent(jsonStr);
+
+  // Se cabe em GET (< 7500 chars), usar GET direto
+  if(encoded.length < 7500){
+    const url = WEBAPP_URL + '?method=POST&payload=' + encoded;
+    const r = await fetch(url);
+    return r.json();
+  }
+
+  // Para payloads grandes: enviar injeções separadamente via GET paginado
+  // Estratégia: salvar sem histórico de injeções primeiro, depois atualizar só injeções
+  if(body.paciente && body.paciente.injecoes && body.paciente.injecoes.length > 0){
+    const injecoes = body.paciente.injecoes;
+    const semInjecoes = { ...body, paciente: { ...body.paciente, injecoes: [] }};
+    const enc1 = encodeURIComponent(JSON.stringify(semInjecoes));
+    const url1 = WEBAPP_URL + '?method=POST&payload=' + enc1;
+    await fetch(url1);
+
+    // Agora atualizar com as injeções
+    const comInjecoes = { ...body, paciente: { ...body.paciente, injecoes }};
+    const enc2 = encodeURIComponent(JSON.stringify(comInjecoes));
+    const url2 = WEBAPP_URL + '?method=POST&payload=' + enc2;
+    const r2 = await fetch(url2);
+    return r2.json();
+  }
+
+  // Último recurso: POST direto
+  const r = await fetch(WEBAPP_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: jsonStr
+  });
+  return r.json();
+}
+
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  const dot = el.querySelector('.sync-dot');
+  el.className = 'sync-' + state;
+  dot.className = 'sync-dot sync-dot-' + state;
+  el.childNodes[1].textContent = msg || (state === 'ok' ? 'Sincronizado' : state === 'saving' ? 'Salvando...' : 'Erro de conexão');
+}
+
+async function recarregarDados() {
+  setSyncStatus('saving','Carregando...');
+  try {
+    const r = await apiGet({ action:'getPacientes', unidade: unidadeAtual });
+    if(r.error) throw new Error(r.error);
+    const raw = r.pacientes || [];
+    // Normalizar campos que podem vir vazios de registros antigos
+    pacientesCache = raw.map(p => {
+      if(!p.statusPaciente || p.statusPaciente==='') p.statusPaciente = 'ativo';
+      if(!p.statusAuthOCT  || p.statusAuthOCT==='')  p.statusAuthOCT  = p.tipo==='convenio' ? 'pendente' : 'n/a';
+      if(!p.statusAuthInj  || p.statusAuthInj==='')  p.statusAuthInj  = p.tipo==='convenio' ? 'pendente' : 'n/a';
+      if(!p.statusAuth     || p.statusAuth==='')      p.statusAuth     = p.tipo==='convenio' ? 'pendente' : 'n/a';
+      if(!p.injecoes) p.injecoes = [];
+      return p;
+    });
+    setSyncStatus('ok');
+    document.getElementById('loading-overlay').classList.add('hidden');
+    renderAll();
+  } catch(e) {
+    setSyncStatus('error','Erro: '+e.message);
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showToast('❌ Erro ao carregar dados: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// DATAS
+// ════════════════════════════════════════════════════
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function addDays(s,d){ const dt=new Date(s+'T12:00:00'); dt.setDate(dt.getDate()+d); return dt.toISOString().split('T')[0]; }
+function addWeeks(s,w){ return addDays(s,w*7); }
+function daysDiff(s){ const n=new Date(); n.setHours(0,0,0,0); return Math.round((new Date(s+'T12:00:00')-n)/86400000); }
+function isValidDate(s){
+  if(!s||s===''||s==='undefined'||s==='null') return false;
+  const d = new Date(s+'T12:00:00');
+  return !isNaN(d.getTime());
+}
+function fmtDate(s){ if(!isValidDate(s)) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('pt-BR'); }
+function fmtFull(s){ if(!isValidDate(s)) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'}); }
+function diaSemStr(s){ if(!isValidDate(s)) return '—'; return new Date(s+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long'}); }
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,5); }
+
+function proxDiaSemana(fromStr,diaSem){
+  const d=new Date(fromStr+'T12:00:00'); const cur=d.getDay();
+  let diff=(diaSem-cur+7)%7; if(diff===0) diff=7;
+  d.setDate(d.getDate()+diff); return d.toISOString().split('T')[0];
+}
+
+function calcProxInjecao(fromDate,semanas,unidade){
+  const raw=addWeeks(fromDate,semanas);
+  const cfg=UNIDADES[unidade];
+  const d=new Date(raw+'T12:00:00');
+  const diff=(cfg.diaSemana-d.getDay()+7)%7;
+  return addDays(raw,diff);
+}
+
+function calcConsulta(injDate){
+  const d=new Date(injDate+'T12:00:00');
+  return addDays(injDate,-((d.getDay()+6)%7));
+}
+
+function calcDatas(fromDate,semanas,unidade){
+  const proxInj=calcProxInjecao(fromDate,semanas,unidade);
+  const proxConsulta=calcConsulta(proxInj);
+  return { proxInj, proxConsulta, proxOCT:proxConsulta };
+}
+
+function calcDatasObs(fromDate,semanas){
+  const proxOCT=proxDiaSemana(addWeeks(fromDate,semanas),1);
+  return { proxOCT, proxConsulta:proxOCT };
+}
+
+// ════════════════════════════════════════════════════
+// STATUS & BADGES
+// ════════════════════════════════════════════════════
+function getStatus(p){
+  if(!['ativo','observacao'].includes(p.statusPaciente)) return p.statusPaciente;
+  if(p.statusPaciente==='observacao') return 'observacao';
+  if(!p.proximaInjecao||p.proximaInjecao==='') return 'sem-data';
+  const diff=daysDiff(p.proximaInjecao);
+  if(p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true') return 'confirmacao';
+  if(diff<0) return 'atrasado';
+  if(diff<=7) return 'esta-semana';
+  return 'em-dia';
+}
+
+function statusBadge(p){
+  const s=getStatus(p);
+  const diff=p.proximaInjecao?daysDiff(p.proximaInjecao):0;
+  if(s==='atrasado')    return `<span class="badge badge-red">⚠ ${Math.abs(diff)}d atrasado</span>`;
+  if(s==='confirmacao') return `<span class="badge badge-blue">❓ Aguard. confirmação</span>`;
+  if(s==='esta-semana') return `<span class="badge badge-yellow">🔔 Em ${diff}d</span>`;
+  if(s==='em-dia')      return `<span class="badge badge-green">✓ Em dia</span>`;
+  if(s==='observacao')  return `<span class="badge badge-teal">🔍 Observação</span>`;
+  if(s==='sem-data')    return `<span class="badge badge-gray">⚙ Completar dados</span>`;
+  if(s==='inativo')     return `<span class="badge badge-slate">■ Inativo</span>`;
+  if(s==='perdido')     return `<span class="badge badge-red">👤 Perda seguimento</span>`;
+  if(s==='obito')       return `<span class="badge badge-slate">✝ Óbito</span>`;
+  return `<span class="badge badge-gray">—</span>`;
+}
+
+function latBadge(lat){
+  if(lat==='OD') return `<span class="lat-od">OD</span>`;
+  if(lat==='OE') return `<span class="lat-oe">OE</span>`;
+  return `<span class="lat-ao">AO</span>`;
+}
+function tipoBadge(t){ return t==='convenio'?`<span class="badge badge-blue">Convênio</span>`:`<span class="badge badge-gold">Particular</span>`; }
+function authBadge(p){
+  if(p.tipo==='particular') return `<span class="badge badge-gray">N/A</span>`;
+  if(p.statusAuth==='autorizado') return `<span class="badge badge-green">✓ Autorizado</span>`;
+  if(p.statusAuth==='negado')     return `<span class="badge badge-red">✗ Negado</span>`;
+  return `<span class="badge badge-yellow">⏳ Pendente</span>`;
+}
+
+function authOCTBadge(p){
+  if(p.tipo==='particular') return `<span class="badge badge-gray">N/A</span>`;
+  if(p.statusAuthOCT==='autorizado') return `<span class="badge badge-green">✓ Auth.</span>`;
+  if(p.statusAuthOCT==='negado')     return `<span class="badge badge-red">✗ Negado</span>`;
+  return `<span class="badge badge-yellow">⏳ Pendente</span>`;
+}
+
+function authInjBadge(p){
+  if(p.tipo==='particular') return `<span class="badge badge-gray">N/A</span>`;
+  if(p.statusAuthInj==='autorizado') return `<span class="badge badge-green">✓ Auth.</span>`;
+  if(p.statusAuthInj==='negado')     return `<span class="badge badge-red">✗ Negado</span>`;
+  return `<span class="badge badge-yellow">⏳ Pendente</span>`;
+}
+
+// ════════════════════════════════════════════════════
+// CARREGAMENTO
+// ════════════════════════════════════════════════════
+function dosesCarreg(med){ return LOADING_DOSES[med]||3; }
+function getDosesFeitas(p){ return parseInt(p.dosesCarregamentoFeitas)||0; }
+function emCarregamento(p){
+  if(!['3-carregamento','4-carregamento'].includes(p.protocolo)) return false;
+  return getDosesFeitas(p) < dosesCarreg(p.medicacao);
+}
+
+// ════════════════════════════════════════════════════
+// ALERTAS
+// ════════════════════════════════════════════════════
+function getAlertas(pac){
+  return pac.filter(p=>p.statusPaciente==='ativo'&&p.proximaInjecao&&p.proximaInjecao!=='').map(p=>{
+    const diff=daysDiff(p.proximaInjecao);
+    const aguard=p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
+    if(aguard)   return {tipo:'confirmacao',p,diff};
+    if(diff<0)   return {tipo:'atrasado',p,diff};
+    if(diff<=7)  return {tipo:'upcoming',p,diff};
+    return null;
+  }).filter(Boolean).sort((a,b)=>a.diff-b.diff);
+}
+
+function renderAlertasBanner(container,alertas){
+  if(!alertas.length){container.innerHTML='';return;}
+  container.innerHTML=alertas.map(a=>{
+    const p=a.p;
+    if(a.tipo==='atrasado') return `<div class="alert-banner alert-overdue"><div class="ab-icon">⚠️</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — injeção com ${Math.abs(a.diff)} dia(s) de atraso</div>
+      <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · Programada: ${fmtDate(p.proximaInjecao)}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-danger" onclick="marcarConfirmacao('${p.id}')">❓ Perguntar se realizou</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
+    if(a.tipo==='confirmacao') return `<div class="alert-banner alert-confirm"><div class="ab-icon">❓</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — paciente não realizou a injeção em ${fmtDate(p.proximaInjecao)}</div>
+      <div>Programada: ${fmtDate(p.proximaInjecao)}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-danger" onclick="pacienteNaoFez('${p.id}')">🔄 Reagendar</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
+    return `<div class="alert-banner alert-upcoming"><div class="ab-icon">🔔</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — injeção em ${a.diff} dia(s) — ${fmtDate(p.proximaInjecao)}</div>
+      <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)}</div>
+      <div class="ab-actions"><button class="btn btn-sm btn-info" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
+    </div></div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════
+// SALVAR (sempre atualiza cache + persiste no Sheets)
+// ════════════════════════════════════════════════════
+async function persistir(p, isNovo) {
+  setSyncStatus('saving');
+  try {
+    const action = isNovo ? 'salvarPaciente' : 'atualizarPaciente';
+    console.log(`[persistir] ${action} | ${p.nome} | proxInj:${p.proximaInjecao} | authOCT:${p.statusAuthOCT} | authInj:${p.statusAuthInj}`);
+    const r = await apiPost({ action, paciente: p });
+    console.log('[persistir] resposta:', JSON.stringify(r));
+    if(r && r.error) throw new Error(r.error);
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error('[persistir] ERRO:', e.message);
+    setSyncStatus('error', 'Erro ao salvar');
+    showToast('❌ Erro ao salvar: ' + e.message);
+  }
+}
+
+function atualizarCache(p) {
+  const idx = pacientesCache.findIndex(x=>x.id===p.id);
+  if(idx>=0) pacientesCache[idx]=p;
+  else pacientesCache.push(p);
+}
+
+function getPac(){ return pacientesCache; }
+
+// ════════════════════════════════════════════════════
+// UNIDADE / NAVEGAÇÃO
+// ════════════════════════════════════════════════════
+const NAV_LABELS={dashboard:'Dashboard',pacientes:'Pacientes',alertas:'Alertas',agenda:'Agenda',autorizacoes:'Autorizações',voz:'🎙️ Comando de Voz'};
+function navigate(sec){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('section-'+sec).classList.add('active');
+  document.getElementById('nav-'+sec).classList.add('active');
+  document.getElementById('page-title').textContent=NAV_LABELS[sec];
+  if(sec==='dashboard')    renderDashboard();
+  if(sec==='pacientes')    renderPacientes();
+  if(sec==='alertas')      renderAlertasPage();
+  if(sec==='agenda')       renderAgenda();
+  if(sec==='autorizacoes') renderAutorizacoes();
+  if(sec==='voz')          renderVoz();
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function toggleConv(prefix){
+  const show=document.getElementById(prefix+'-tipo').value==='convenio';
+  document.getElementById(prefix+'-fc-conv').style.display=show?'':'none';
+  document.getElementById(prefix+'-fc-cart').style.display=show?'':'none';
+}
+
+// ════════════════════════════════════════════════════
+// NOVO PACIENTE
+// ════════════════════════════════════════════════════
+async function salvarNovoPaciente(){
+  const nome=document.getElementById('np-nome').value.trim();
+  if(!nome){alert('Informe o nome.');return;}
+  const data1=document.getElementById('np-data1').value;
+  const semanas=parseInt(document.getElementById('np-interv').value);
+  const novas=data1?calcDatas(data1,semanas,unidadeAtual):{proxInj:null,proxConsulta:null,proxOCT:null};
+  const tipo=document.getElementById('np-tipo').value;
+  const p={
+    id:genId(), unidade:unidadeAtual, nome,
+    nascimento:document.getElementById('np-nasc').value,
+    telefone:document.getElementById('np-tel').value,
+    tipo, convenio:document.getElementById('np-conv').value,
+    carteirinha:document.getElementById('np-cart').value,
+    diagnostico:document.getElementById('np-diag').value,
+    lateral:document.getElementById('np-lat').value,
+    medicacao:document.getElementById('np-med').value,
+    protocolo:document.getElementById('np-proto').value,
+    intervalo:semanas, medico:document.getElementById('np-medico').value,
+    obs:document.getElementById('np-obs').value,
+    dataInicio:data1||'', ultimaInjecao:'',
+    proximaInjecao:novas.proxInj||'', proximaConsulta:novas.proxConsulta||'',
+    proximoOCT:novas.proxOCT||'',
+    statusAuth:tipo==='convenio'?'pendente':'n/a',
+    statusAuthOCT:tipo==='convenio'?'pendente':'n/a',
+    statusAuthInj:tipo==='convenio'?'pendente':'n/a',
+    aguardandoConfirmacao:false, modoObservacao:false,
+    proximoOCTObservacao:'', statusPaciente:'ativo',
+    inativoMotivo:'', inativoData:'', inativoObs:'',
+    dosesCarregamentoFeitas:0, injecoes:[], ativo:true, criadoEm:todayStr()
+  };
+  atualizarCache(p);
+  closeModal('modal-novo');
+  clearNpForm();
+  renderAll();
+  await persistir(p, true);
+  showToast(`✅ ${p.nome} cadastrado`);
+}
+
+function clearNpForm(){
+  ['np-nome','np-nasc','np-tel','np-conv','np-cart','np-obs','np-data1'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('np-tipo').value='convenio';
+  document.getElementById('np-data1').value=todayStr();
+  toggleConv('np');
+}
+
+// ════════════════════════════════════════════════════
+// EDITAR PACIENTE
+// ════════════════════════════════════════════════════
+function abrirEditar(id){
+  currentId=id;
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  document.getElementById('ed-nome').value=p.nome;
+  document.getElementById('ed-nasc').value=p.nascimento||'';
+  document.getElementById('ed-tel').value=p.telefone||'';
+  document.getElementById('ed-tipo').value=p.tipo||'particular';
+  document.getElementById('ed-conv').value=p.convenio||'';
+  document.getElementById('ed-cart').value=p.carteirinha||'';
+  document.getElementById('ed-diag').value=p.diagnostico||'DMRI';
+  document.getElementById('ed-lat').value=p.lateral||'OD';
+  document.getElementById('ed-med').value=p.medicacao||'Eylia 2mg (Aflibercept)';
+  document.getElementById('ed-proto').value=p.protocolo||'tratar-estender';
+  document.getElementById('ed-interv').value=String(p.intervalo||4);
+  document.getElementById('ed-doses').value=String(getDosesFeitas(p));
+  document.getElementById('ed-medico').value=p.medico||'Dr. Eduardo Novais';
+  document.getElementById('ed-obs').value=p.obs||'';
+  toggleConv('ed');
+  closeModal('modal-det'); openModal('modal-editar');
+}
+
+async function salvarEdicao(){
+  const nome=document.getElementById('ed-nome').value.trim();
+  if(!nome){alert('Informe o nome.');return;}
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const novaTipo=document.getElementById('ed-tipo').value;
+  p.nome=nome; p.nascimento=document.getElementById('ed-nasc').value;
+  p.telefone=document.getElementById('ed-tel').value; p.tipo=novaTipo;
+  p.convenio=document.getElementById('ed-conv').value;
+  p.carteirinha=document.getElementById('ed-cart').value;
+  p.diagnostico=document.getElementById('ed-diag').value;
+  p.lateral=document.getElementById('ed-lat').value;
+  p.medicacao=document.getElementById('ed-med').value;
+  p.protocolo=document.getElementById('ed-proto').value;
+  p.intervalo=parseInt(document.getElementById('ed-interv').value);
+  p.dosesCarregamentoFeitas=parseInt(document.getElementById('ed-doses').value)||0;
+  p.medico=document.getElementById('ed-medico').value;
+  p.obs=document.getElementById('ed-obs').value;
+  if(novaTipo==='convenio'&&p.statusAuth==='n/a') p.statusAuth='pendente';
+  if(novaTipo==='particular') p.statusAuth='n/a';
+  atualizarCache(p);
+  closeModal('modal-editar');
+  renderAll();
+  await persistir(p, false);
+  showToast(`✏️ ${p.nome} — ficha atualizada`);
+}
+
+// ════════════════════════════════════════════════════
+// DETALHE
+// ════════════════════════════════════════════════════
+function verDetalhe(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  currentId=id;
+  document.getElementById('det-titulo').textContent=`👁️ ${p.nome}`;
+  const isInat=['inativo','perdido','obito'].includes(p.statusPaciente);
+  const isObs=p.statusPaciente==='observacao';
+  const diff=p.proximaInjecao&&p.proximaInjecao!==''?daysDiff(p.proximaInjecao):null;
+  const aguard=p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
+  const cfg=UNIDADES[unidadeAtual];
+
+  let alertHtml='';
+  if(aguard) alertHtml=`<div class="alert-banner alert-confirm" style="margin-bottom:12px"><div class="ab-icon">❓</div><div class="ab-body"><div class="ab-title">Aguardando confirmação da injeção de ${fmtDate(p.proximaInjecao)}</div></div></div>`;
+  else if(!isInat&&!isObs&&diff!==null&&diff<0) alertHtml=`<div class="alert-banner alert-overdue" style="margin-bottom:12px"><div class="ab-icon">⚠️</div><div class="ab-body"><div class="ab-title">Injeção com ${Math.abs(diff)} dia(s) de atraso!</div></div></div>`;
+  else if(!isInat&&!isObs&&diff!==null&&diff<=7) alertHtml=`<div class="alert-banner alert-upcoming" style="margin-bottom:12px"><div class="ab-icon">🔔</div><div class="ab-body"><div class="ab-title">Injeção em ${diff} dia(s) — contatar paciente</div></div></div>`;
+  else if(isObs) alertHtml=`<div class="alert-banner alert-observe" style="margin-bottom:12px"><div class="ab-icon">🔍</div><div class="ab-body"><div class="ab-title">Protocolo de Observação — Próximo OCT: ${fmtDate(p.proximoOCTObservacao||p.proximoOCT)}</div></div></div>`;
+  else if(isInat){ const lbs={inativo:'Inativo',perdido:'Perda de seguimento',obito:'Óbito',transferencia:'Transferência',alta:'Alta médica'}; alertHtml=`<div class="alert-banner" style="margin-bottom:12px;background:#f1f5f9;border-color:#cbd5e1;color:#475569"><div class="ab-icon">■</div><div class="ab-body"><div class="ab-title">${lbs[p.inativoMotivo]||p.statusPaciente} ${p.inativoData?'· '+fmtDate(p.inativoData):''}</div><div>${p.inativoObs||''}</div></div></div>`; }
+
+  let datasBox='';
+  if(!isInat&&!isObs&&p.proximaInjecao&&isValidDate(p.proximaInjecao)){
+    datasBox=`<div class="next-date-box">
+      <div class="ndb-item"><div class="ndb-l">💉 Próxima Injeção</div><div class="ndb-d">${fmtDate(p.proximaInjecao)}</div><div class="ndb-w">${diaSemStr(p.proximaInjecao)}</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">🩺 Consulta</div><div class="ndb-d">${fmtDate(p.proximaConsulta)}</div><div class="ndb-w">${diaSemStr(p.proximaConsulta)}</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">📷 OCT</div><div class="ndb-d">${fmtDate(p.proximoOCT)}</div><div class="ndb-w">${diaSemStr(p.proximoOCT)}</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">🏥 Unidade</div><div class="ndb-d" style="font-size:12px">${cfg.nome}</div><div class="ndb-w">${cfg.diaLabel}s</div></div>
+    </div>`;
+  } else if(isObs){
+    const proxObs=p.proximoOCTObservacao||p.proximoOCT||'';
+    datasBox=`<div class="next-date-box"><div class="ndb-item"><div class="ndb-l">📷 Próximo OCT + Consulta</div><div class="ndb-d">${fmtDate(proxObs)}</div><div class="ndb-w">${diaSemStr(proxObs)}</div></div><div class="ndb-sep"></div><div class="ndb-item"><div class="ndb-l">Protocolo</div><div class="ndb-d" style="font-size:12px">Observar e Estender</div><div class="ndb-w">Sem injeção programada</div></div></div>`;
+  }
+
+  const dosesFeitas=getDosesFeitas(p);
+  const totalCarreg=dosesCarreg(p.medicacao);
+  const emCarg=emCarregamento(p);
+  const injHist=(p.injecoes||[]).slice().reverse().slice(0,8);
+
+  document.getElementById('det-body').innerHTML=`${alertHtml}${datasBox}
+    <div class="detail-grid">
+      <div class="detail-item"><div class="di-l">Diagnóstico</div><div class="di-v">${p.diagnostico}</div></div>
+      <div class="detail-item"><div class="di-l">Lateralidade</div><div class="di-v">${p.lateral}</div></div>
+      <div class="detail-item"><div class="di-l">Medicação</div><div class="di-v">${p.medicacao}</div></div>
+      <div class="detail-item"><div class="di-l">Protocolo</div><div class="di-v">${p.protocolo}
+        ${emCarg?`<span class="badge badge-blue" style="margin-left:5px">Dose ${dosesFeitas+1}/${totalCarreg}</span>`:''}
+        ${['3-carregamento','4-carregamento'].includes(p.protocolo)&&!emCarg?'<span class="badge badge-green" style="margin-left:5px">Carregamento ✓</span>':''}
+      </div></div>
+      <div class="detail-item"><div class="di-l">Intervalo</div><div class="di-v">${emCarg?'4 sem (carregamento)':p.intervalo+' semanas'}</div></div>
+      <div class="detail-item"><div class="di-l">Total injeções</div><div class="di-v">${(p.injecoes||[]).length}</div></div>
+      <div class="detail-item"><div class="di-l">Tipo</div><div class="di-v">${p.tipo==='convenio'?'🏥 Convênio: '+(p.convenio||'—'):'💳 Particular'}</div></div>
+      <div class="detail-item"><div class="di-l">Última injeção</div><div class="di-v">${fmtDate(p.ultimaInjecao)||'—'}</div></div>
+      <div class="detail-item"><div class="di-l">Médico</div><div class="di-v">${p.medico}</div></div>
+      <div class="detail-item"><div class="di-l">📷 Auth. OCT</div><div class="di-v">${authOCTBadge(p)}</div></div>
+      <div class="detail-item"><div class="di-l">💉 Auth. Injeção</div><div class="di-v">${authInjBadge(p)}</div></div>
+    </div>
+    ${p.obs&&p.obs!==''?`<div style="background:#f8f9fc;border-radius:6px;padding:8px 11px;font-size:12px;color:var(--gray);margin-bottom:11px">📝 ${p.obs}</div>`:''}
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold);margin-bottom:7px">Histórico de Injeções</div>
+    ${injHist.length?injHist.map(inj=>`<div class="inject-row">
+      <div><div style="font-weight:600">💉 ${inj.olho} — ${inj.med}
+        ${inj.doseCarregamento?`<span class="badge badge-blue" style="margin-left:5px">Dose ${inj.doseCarregamento} carg.</span>`:''}
+        ${inj.trocaMedicacao?`<span class="badge badge-yellow" style="margin-left:5px">Troca: ${medBadge(inj.trocaMedicacao)}→${medBadge(inj.med)}</span>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--gray)">${fmtDate(inj.data)} · ${inj.intervalo}sem ${inj.obs?'· '+inj.obs:''}</div></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${inj.relatorio?'<span class="badge badge-green">Rel.✓</span>':''}
+        ${inj.octSolicitado?'<span class="badge badge-blue">OCT✓</span>':''}
+      </div></div>`).join(''):`<div style="color:var(--gray);font-size:13px;padding:8px 0">Nenhuma injeção registrada.</div>`}
+    ${p.tipo==='convenio'?`<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-light);">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">📷 Auth. OCT:</span>
+        ${authOCTBadge(p)}
+        <button class="btn btn-sm ${p.statusAuthOCT==='autorizado'?'btn-success':'btn-outline'}" onclick="toggleAuthOCT('${p.id}')">
+          ${p.statusAuthOCT==='autorizado'?'✓ Autorizado':'Marcar como autorizado'}
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">💉 Auth. Injeção:</span>
+        ${authInjBadge(p)}
+        <button class="btn btn-sm ${p.statusAuthInj==='autorizado'?'btn-success':'btn-outline'}" onclick="toggleAuthInj('${p.id}')">
+          ${p.statusAuthInj==='autorizado'?'✓ Autorizado':'Marcar como autorizado'}
+        </button>
+      </div>
+    </div>`:''}`;
+
+  let footer=`<button class="btn btn-outline btn-sm" onclick="closeModal('modal-det')">Fechar</button>`;
+  footer+=`<button class="btn btn-warn btn-sm" onclick="abrirEditar('${p.id}')">✏️ Editar ficha</button>`;
+  if(!isInat){
+    if(!isObs){
+      footer+=`<button class="btn btn-primary btn-sm" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>`;
+      footer+=`<button class="btn btn-teal btn-sm" onclick="abrirObservacao('${p.id}')">🔍 Sem injeção</button>`;
+    } else {
+      footer+=`<button class="btn btn-primary btn-sm" onclick="voltarTratamento('${p.id}')">💉 Retomar injeções</button>`;
+    }
+    footer+=`<button class="btn btn-slate btn-sm" onclick="abrirInativar('${p.id}','perdido')">👤 Perda/Óbito</button>`;
+  } else {
+    footer+=`<button class="btn btn-success btn-sm" onclick="reativar('${p.id}')">↩ Reativar</button>`;
+  }
+  document.getElementById('det-footer').innerHTML=footer;
+  openModal('modal-det');
+}
+
+async function toggleAuthOCT(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  const opts=['pendente','autorizado','negado'];
+  if(!p.statusAuthOCT) p.statusAuthOCT='pendente';
+  p.statusAuthOCT=opts[(opts.indexOf(p.statusAuthOCT)+1)%opts.length];
+  atualizarCache(p); renderAll(); verDetalhe(id);
+  await persistir(p,false);
+}
+
+async function toggleAuthInj(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  const opts=['pendente','autorizado','negado'];
+  if(!p.statusAuthInj) p.statusAuthInj='pendente';
+  p.statusAuthInj=opts[(opts.indexOf(p.statusAuthInj)+1)%opts.length];
+  atualizarCache(p); renderAll(); verDetalhe(id);
+  await persistir(p,false);
+}
+
+// ════════════════════════════════════════════════════
+// INJEÇÃO
+// ════════════════════════════════════════════════════
+function abrirInjecao(id){
+  currentId=id;
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  document.getElementById('inj-pac').value=p.nome;
+  document.getElementById('inj-data').value=todayStr();
+  document.getElementById('inj-olho').value=p.lateral||'OD';
+  document.getElementById('inj-med').value=p.medicacao;
+  document.getElementById('inj-prox-olho').value=p.lateral||'OD';
+  document.getElementById('inj-obs').value='';
+  document.getElementById('inj-rel').checked=false;
+  document.getElementById('inj-oct').checked=false;
+  document.getElementById('inj-troca-aviso').style.display='none';
+  const emCarg=emCarregamento(p);
+  const dosesFeitas=getDosesFeitas(p);
+  const totalCarreg=dosesCarreg(p.medicacao);
+  if(emCarg){
+    document.getElementById('inj-prox').value='4';
+    document.getElementById('inj-prox').disabled=true;
+    document.getElementById('inj-carregamento-aviso').style.display='';
+    document.getElementById('inj-carregamento-aviso').innerHTML=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 12px;font-size:12px;color:#92400e">⏳ <strong>Dose de carregamento ${dosesFeitas+1}/${totalCarreg}</strong> — intervalo fixo em 4 semanas.${dosesFeitas+1===totalCarreg?' <strong>Esta é a última dose de carregamento.</strong>':''}</div>`;
+  } else {
+    document.getElementById('inj-prox').value=String(p.intervalo||4);
+    document.getElementById('inj-prox').disabled=false;
+    document.getElementById('inj-carregamento-aviso').style.display='none';
+  }
+  const banner=document.getElementById('inj-loading-banner');
+  if(['3-carregamento','4-carregamento'].includes(p.protocolo)){
+    banner.style.display='';
+    const feitas=getDosesFeitas(p); const total=dosesCarreg(p.medicacao);
+    banner.innerHTML=feitas>=total
+      ?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 12px;font-size:12px;color:#166534">✅ <strong>Carregamento completo (${total}/${total}).</strong> Paciente em manutenção.</div>`
+      :`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:9px 12px;font-size:12px;color:#1e40af">💉 <strong>Dose ${feitas+1} de ${total}</strong> — ${medBadge(p.medicacao)}</div>`;
+  } else { banner.style.display='none'; }
+  atualizarInfoInj();
+  closeModal('modal-det'); openModal('modal-inj');
+}
+
+function onMedChange(){
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  document.getElementById('inj-troca-aviso').style.display=document.getElementById('inj-med').value!==p.medicacao?'':'none';
+}
+
+function atualizarInfoInj(){
+  const data=document.getElementById('inj-data').value;
+  const prox=parseInt(document.getElementById('inj-prox').value)||4;
+  if(!data) return;
+  const d=calcDatas(data,prox,unidadeAtual);
+  const cfg=UNIDADES[unidadeAtual];
+  document.getElementById('inj-info').innerHTML=`<div class="info-box" style="color:#166534"><strong>✓ ${cfg.nome} (${cfg.diaLabel}s)</strong><br>💉 Próxima: <strong>${fmtFull(d.proxInj)}</strong><br>🩺 Consulta: <strong>${fmtFull(d.proxConsulta)}</strong></div>`;
+}
+
+document.getElementById('inj-data').addEventListener('change',atualizarInfoInj);
+document.getElementById('inj-prox').addEventListener('change',atualizarInfoInj);
+
+async function salvarInjecao(){
+  const data=document.getElementById('inj-data').value;
+  if(!data){alert('Informe a data.');return;}
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const olhoAplicado=document.getElementById('inj-olho').value;
+  const medUsada=document.getElementById('inj-med').value;
+  const proxOlho=document.getElementById('inj-prox-olho').value;
+  const trocouMed=medUsada!==p.medicacao;
+  const emCarg=emCarregamento(p);
+  const prox=emCarg?4:parseInt(document.getElementById('inj-prox').value);
+  const novas=calcDatas(data,prox,unidadeAtual);
+  const dosesAnt=getDosesFeitas(p);
+  const totalCarreg=dosesCarreg(medUsada);
+  const novasDoses=dosesAnt+1;
+  p.injecoes.push({id:genId(),data,olho:olhoAplicado,med:medUsada,intervalo:prox,obs:document.getElementById('inj-obs').value,relatorio:document.getElementById('inj-rel').checked,octSolicitado:document.getElementById('inj-oct').checked,doseCarregamento:novasDoses<=totalCarreg?novasDoses:null,trocaMedicacao:trocouMed?p.medicacao:null});
+  p.ultimaInjecao=data; p.intervalo=prox; p.lateral=proxOlho;
+  if(trocouMed) p.medicacao=medUsada;
+  p.dosesCarregamentoFeitas=novasDoses;
+  if(['3-carregamento','4-carregamento'].includes(p.protocolo)&&novasDoses>=totalCarreg) p.protocolo='tratar-estender';
+  p.proximaInjecao=novas.proxInj; p.proximaConsulta=novas.proxConsulta; p.proximoOCT=novas.proxOCT;
+  p.aguardandoConfirmacao=false; p.statusPaciente='ativo'; p.modoObservacao=false;
+  p.statusAuth=p.tipo==='convenio'?'pendente':'n/a';
+  p.statusAuthOCT=p.tipo==='convenio'?'pendente':'n/a';
+  p.statusAuthInj=p.tipo==='convenio'?'pendente':'n/a';
+  atualizarCache(p); closeModal('modal-inj'); renderAll();
+  const msg=novasDoses>=totalCarreg&&['3-carregamento','4-carregamento'].includes(p.protocolo)?`✅ Carregamento completo! Próxima: ${fmtDate(p.proximaInjecao)}`:`💉 Injeção registrada — próxima: ${fmtDate(p.proximaInjecao)}`;
+  showToast(msg);
+  await persistir(p,false);
+}
+
+// ════════════════════════════════════════════════════
+// CONFIRMAR
+// ════════════════════════════════════════════════════
+function atualizarInfoConf(){
+  const data=document.getElementById('conf-data').value;
+  const prox=parseInt(document.getElementById('conf-prox').value)||4;
+  if(!data) return;
+  const d=calcDatas(data,prox,unidadeAtual);
+  const cfg=UNIDADES[unidadeAtual];
+  document.getElementById('conf-info').innerHTML=`<div class="info-box" style="color:#166534"><strong>✓ ${cfg.nome}</strong><br>💉 Próxima: <strong>${fmtFull(d.proxInj)}</strong><br>🩺 Consulta: <strong>${fmtFull(d.proxConsulta)}</strong></div>`;
+}
+document.getElementById('conf-data').addEventListener('change',atualizarInfoConf);
+document.getElementById('conf-prox').addEventListener('change',atualizarInfoConf);
+
+function marcarConfirmacao(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.aguardandoConfirmacao=true; atualizarCache(p); renderAll();
+  persistir(p,false); showToast('Marcado como aguardando confirmação');
+}
+
+function iniciarConfirmacao(id){
+  currentId=id;
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  document.getElementById('conf-pac').value=p.nome;
+  document.getElementById('conf-data').value=p.proximaInjecao||todayStr();
+  document.getElementById('conf-prox').value=String(p.intervalo||4);
+  atualizarInfoConf();
+  closeModal('modal-det'); openModal('modal-confirm');
+}
+
+async function salvarConfirmacao(){
+  const data=document.getElementById('conf-data').value;
+  if(!data){alert('Informe a data.');return;}
+  const prox=parseInt(document.getElementById('conf-prox').value);
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const novas=calcDatas(data,prox,unidadeAtual);
+  p.injecoes.push({id:genId(),data,olho:p.lateral,med:p.medicacao,intervalo:prox,obs:'Confirmado pelo paciente',relatorio:false,octSolicitado:false});
+  p.ultimaInjecao=data; p.intervalo=prox;
+  p.proximaInjecao=novas.proxInj; p.proximaConsulta=novas.proxConsulta; p.proximoOCT=novas.proxOCT;
+  p.aguardandoConfirmacao=false; p.statusPaciente='ativo'; p.modoObservacao=false;
+  p.dosesCarregamentoFeitas=(getDosesFeitas(p))+1;
+  p.statusAuth=p.tipo==='convenio'?'pendente':'n/a';
+  p.statusAuthOCT=p.tipo==='convenio'?'pendente':'n/a';
+  p.statusAuthInj=p.tipo==='convenio'?'pendente':'n/a';
+  atualizarCache(p); closeModal('modal-confirm'); renderAll();
+  showToast(`✅ ${p.nome} — próxima: ${fmtDate(p.proximaInjecao)}`);
+  await persistir(p,false);
+}
+
+async function pacienteNaoFez(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.aguardandoConfirmacao=false;
+  const d=calcDatas(todayStr(),p.intervalo||4,unidadeAtual);
+  p.proximaInjecao=d.proxInj; p.proximaConsulta=d.proxConsulta; p.proximoOCT=d.proxOCT;
+  atualizarCache(p); renderAll();
+  showToast(`${p.nome} — reagendado para ${fmtDate(p.proximaInjecao)}`);
+  await persistir(p,false);
+}
+
+// ════════════════════════════════════════════════════
+// OBSERVAÇÃO
+// ════════════════════════════════════════════════════
+function atualizarInfoObs(){
+  const data=document.getElementById('obs-ultinj').value;
+  const interv=parseInt(document.getElementById('obs-interv').value)||8;
+  if(!data) return;
+  const d=calcDatasObs(data,interv);
+  document.getElementById('obs-info').innerHTML=`<div class="info-box" style="color:#0f766e"><strong>🔍 Observar e Estender</strong><br>📷 Próximo OCT + Consulta: <strong>${fmtFull(d.proxOCT)}</strong></div>`;
+}
+document.getElementById('obs-ultinj').addEventListener('change',atualizarInfoObs);
+document.getElementById('obs-interv').addEventListener('change',atualizarInfoObs);
+
+function abrirObservacao(id){
+  currentId=id;
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  document.getElementById('obs-pac').value=p.nome;
+  document.getElementById('obs-ultinj').value=p.ultimaInjecao||todayStr();
+  document.getElementById('obs-interv').value='8';
+  document.getElementById('obs-motivo').value='';
+  atualizarInfoObs();
+  closeModal('modal-det'); openModal('modal-observacao');
+}
+
+async function salvarObservacao(){
+  const data=document.getElementById('obs-ultinj').value;
+  const interv=parseInt(document.getElementById('obs-interv').value);
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const d=calcDatasObs(data||todayStr(),interv);
+  p.statusPaciente='observacao'; p.modoObservacao=true;
+  p.proximoOCTObservacao=d.proxOCT; p.proximaConsulta=d.proxConsulta;
+  p.proximaInjecao=''; p.aguardandoConfirmacao=false;
+  p.obs=(p.obs&&p.obs!==''?p.obs+' | ':'')+`Obs: ${document.getElementById('obs-motivo').value} (${todayStr()})`;
+  atualizarCache(p); closeModal('modal-observacao'); renderAll();
+  showToast(`🔍 ${p.nome} — protocolo de observação iniciado`);
+  await persistir(p,false);
+}
+
+async function voltarTratamento(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.statusPaciente='ativo'; p.modoObservacao=false; p.proximoOCTObservacao='';
+  atualizarCache(p); closeModal('modal-det'); renderAll();
+  showToast(`${p.nome} — retomando injeções`);
+  await persistir(p,false);
+}
+
+// ════════════════════════════════════════════════════
+// INATIVAR
+// ════════════════════════════════════════════════════
+function abrirInativar(id,preMotivo){
+  currentId=id;
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  document.getElementById('inat-pac').value=p.nome;
+  document.getElementById('inat-motivo').value=preMotivo||'perdido';
+  document.getElementById('inat-data').value=todayStr();
+  document.getElementById('inat-obs').value='';
+  updateInatMotivo();
+  closeModal('modal-det'); openModal('modal-inativar');
+}
+
+function updateInatMotivo(){
+  const m=document.getElementById('inat-motivo').value;
+  document.getElementById('inat-titulo').textContent=m==='obito'?'✝ Registrar Óbito':'Inativar Paciente';
+  document.getElementById('inat-btn').textContent=m==='obito'?'✝ Confirmar Óbito':'Confirmar Inativação';
+}
+
+async function salvarInativacao(){
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const motivo=document.getElementById('inat-motivo').value;
+  p.statusPaciente=motivo==='obito'?'obito':motivo==='perdido'?'perdido':'inativo';
+  p.inativoMotivo=motivo; p.inativoData=document.getElementById('inat-data').value;
+  p.inativoObs=document.getElementById('inat-obs').value; p.aguardandoConfirmacao=false;
+  atualizarCache(p); closeModal('modal-inativar'); renderAll();
+  showToast(`${p.nome} — inativado`);
+  await persistir(p,false);
+}
+
+async function reativar(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.statusPaciente='ativo'; p.inativoMotivo=''; p.inativoData=''; p.inativoObs='';
+  atualizarCache(p); closeModal('modal-det'); renderAll();
+  showToast(`↩ ${p.nome} — reativado`);
+  await persistir(p,false);
+}
+
+// ════════════════════════════════════════════════════
+// RENDER — DASHBOARD
+// ════════════════════════════════════════════════════
+function renderDashboard(){
+  const pac=getPac();
+  const ativos=pac.filter(p=>p.statusPaciente==='ativo');
+  const obs=pac.filter(p=>p.statusPaciente==='observacao');
+  const alertas=getAlertas(ativos);
+  document.getElementById('stat-total').textContent=ativos.length;
+  document.getElementById('stat-atrasados').textContent=ativos.filter(p=>getStatus(p)==='atrasado').length;
+  document.getElementById('stat-semana').textContent=ativos.filter(p=>getStatus(p)==='esta-semana').length;
+  document.getElementById('stat-observe').textContent=obs.length;
+  document.getElementById('stat-emdia').textContent=ativos.filter(p=>getStatus(p)==='em-dia').length;
+  renderAlertasBanner(document.getElementById('dash-alertas-container'),alertas.slice(0,5));
+  const urgentes=ativos.filter(p=>['atrasado','confirmacao','esta-semana'].includes(getStatus(p))).sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+  const uDiv=document.getElementById('dash-urgentes');
+  if(!urgentes.length){uDiv.innerHTML='<div class="empty"><span class="ei">✅</span><p>Nenhuma urgência</p></div>';}
+  else{uDiv.innerHTML=`<table><thead><tr><th>Paciente</th><th>Diagnóstico</th><th>Lat.</th><th>Medicação</th><th>Próx.Injeção</th><th>Status</th><th></th></tr></thead><tbody>${urgentes.map(p=>`<tr><td><strong>${p.nome}</strong><br><small style="color:var(--gray)">${p.medico}</small></td><td>${p.diagnostico}</td><td>${latBadge(p.lateral)}</td><td><span class="badge badge-navy" style="font-size:10px">${medBadge(p.medicacao)}</span></td><td>${fmtDate(p.proximaInjecao)}</td><td>${statusBadge(p)}</td><td><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver</button></td></tr>`).join('')}</tbody></table>`;}
+  const em14=addDays(todayStr(),14);
+  const prox=ativos.filter(p=>p.proximaInjecao&&p.proximaInjecao!==''&&p.proximaInjecao>=todayStr()&&p.proximaInjecao<=em14&&!(p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true')).sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+  const pDiv=document.getElementById('dash-proximos');
+  if(!prox.length){pDiv.innerHTML='<div class="empty"><span class="ei">📆</span><p>Nenhum procedimento nos próximos 14 dias</p></div>';}
+  else{pDiv.innerHTML=`<table><thead><tr><th>Data</th><th>Dia</th><th>Paciente</th><th>Médico</th><th>Medicação</th><th>Tipo</th><th></th></tr></thead><tbody>${prox.map(p=>`<tr><td>${fmtDate(p.proximaInjecao)}</td><td style="font-size:11px;color:var(--gray)">${diaSemStr(p.proximaInjecao)}</td><td><strong>${p.nome}</strong></td><td style="font-size:11px;color:var(--gray)">${p.medico}</td><td><span class="badge badge-navy" style="font-size:10px">${medBadge(p.medicacao)}</span></td><td>${tipoBadge(p.tipo)}</td><td><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver</button></td></tr>`).join('')}</tbody></table>`;}
+  updateNavBadges(pac);
+}
+
+function renderAlertasPage(){
+  const pac=getPac().filter(p=>p.statusPaciente==='ativo');
+  const alertas=getAlertas(pac);
+  const div=document.getElementById('alertas-content');
+  if(!alertas.length){div.innerHTML='<div class="empty"><span class="ei">🔔</span><p>Nenhum alerta</p></div>';return;}
+  renderAlertasBanner(div,alertas);
+}
+
+// ── MODO GRUPOS ──
+let modoGrupos = true;
+
+function toggleModoGrupos(){
+  modoGrupos = !modoGrupos;
+  const btn = document.getElementById('btn-modo-grupos');
+  btn.textContent = modoGrupos ? '☰ Ver lista simples' : '⊞ Ver por grupos';
+  renderPacientes();
+}
+
+// Classificação do paciente em grupo
+function getGrupo(p){
+  // 1. Inativos sempre primeiro
+  if(['inativo','perdido','obito'].includes(p.statusPaciente)) return 'inativos';
+
+  // 2. Observação
+  if(p.statusPaciente === 'observacao') return 'obs';
+
+  const temInjecoes = p.injecoes && p.injecoes.length > 0;
+  const temProxData = p.proximaInjecao && isValidDate(p.proximaInjecao);
+
+  // 3. Convênio: verificar autorização ANTES de qualquer outra coisa
+  //    (paciente pode ter proximaInjecao preenchida via edição manual, sem injeção registrada)
+  if(p.tipo === 'convenio'){
+    // Se nunca fez nada e não tem dado → completar dados
+    if(!temInjecoes && !temProxData) return 'semdata';
+    // Urgente tem prioridade máxima mesmo para convênio
+    const statusC = getStatus(p);
+    if(statusC === 'atrasado' || statusC === 'confirmacao') return 'urgente';
+    // Checar autorizações
+    const octOk = p.statusAuthOCT === 'autorizado';
+    const injOk = p.statusAuthInj === 'autorizado';
+    if(!octOk || !injOk) return 'auth';
+    return 'agendar';
+  }
+
+  // 4. Particular: sem necessidade de autorização
+  if(!temInjecoes && !temProxData) return 'semdata';
+  const status = getStatus(p);
+  if(status === 'atrasado' || status === 'confirmacao') return 'urgente';
+  if(status === 'esta-semana' || status === 'em-dia') return 'agendar';
+
+  return 'ok';
+}
+
+const GRUPOS_DEF = [
+  { key:'urgente', cls:'grupo-urgente', icon:'🔴', title:'Atenção Urgente',
+    desc:'Atrasados ou aguardando confirmação de realização', open:true },
+  { key:'auth',    cls:'grupo-auth',    icon:'📋', title:'Aguardando Autorização',
+    desc:'Injeção realizada — aguardando autorização de OCT e/ou injeção no convênio', open:true },
+  { key:'agendar', cls:'grupo-agendar', icon:'📅', title:'Prontos para Agendar',
+    desc:'Autorizações OK (ou particular) — aguardando agendamento com o paciente', open:true },
+  { key:'ok',      cls:'grupo-ok',      icon:'✅', title:'Agendados — Aguardando Procedimento',
+    desc:'Tudo agendado, injeção futura dentro do prazo', open:false },
+  { key:'obs',     cls:'grupo-obs',     icon:'🔍', title:'Em Observação',
+    desc:'Protocolo Observar e Estender — apenas OCT e consulta', open:false },
+  { key:'semdata', cls:'grupo-semdata', icon:'⚙️', title:'Completar Dados',
+    desc:'Pacientes importados sem data de primeira aplicação', open:false },
+  { key:'inativos',cls:'grupo-inativos',icon:'■',  title:'Inativos / Perda / Óbito',
+    desc:'Fora do acompanhamento ativo', open:false },
+];
+
+function toggleGrupo(key){
+  const body = document.getElementById('grupo-body-'+key);
+  const chev = document.getElementById('grupo-chev-'+key);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+function pacienteRow(p){
+  const isInat = ['inativo','perdido','obito'].includes(p.statusPaciente);
+  const isObs  = p.statusPaciente === 'observacao';
+  const proxOCT = isObs ? (p.proximoOCTObservacao||p.proximoOCT||'') : (p.proximaConsulta||'');
+  const proxInj = isObs ? '—' : (isInat ? '—' : fmtDate(p.proximaInjecao)||'—');
+  return `<tr style="${isInat?'opacity:.55':''}">
+    <td><div style="font-weight:600">${p.nome}</div><div style="font-size:10px;color:var(--gray)">${p.medico}</div></td>
+    <td style="font-size:12px">${p.diagnostico}</td>
+    <td>${latBadge(p.lateral)}</td>
+    <td><span class="badge badge-navy" style="font-size:10px">${medBadge(p.medicacao)}</span><br><span style="font-size:9px;color:var(--gray)">${isObs?'Obs':p.intervalo+'sem'}</span></td>
+    <td>${tipoBadge(p.tipo)}</td>
+    <td style="font-size:12px">${isInat?'—':fmtDate(proxOCT)||'—'}</td>
+    <td style="font-size:12px">${proxInj}</td>
+    <td>${statusBadge(p)}</td>
+    <td>${authOCTBadge(p)}</td>
+    <td>${authInjBadge(p)}</td>
+    <td><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Detalhes</button></td>
+  </tr>`;
+}
+
+function medBadge(med){
+  if(!med) return '—';
+  // Mostrar nome completo relevante
+  if(med.includes('8mg')) return 'Eylia 8mg';
+  if(med.includes('Eylia')) return 'Eylia 2mg';
+  if(med.includes('Vabysmo')||med.includes('Faricimabe')) return 'Vabysmo';
+  if(med.includes('Avastin')||med.includes('Bevacizumab')) return 'Avastin';
+  if(med.includes('Ozurdex')) return 'Ozurdex';
+  return med.split(' ')[0];
+}
+
+function tableWrap(rows){
+  if(!rows.length) return '<div class="empty" style="padding:20px"><span class="ei" style="font-size:24px">—</span><p>Nenhum paciente neste grupo</p></div>';
+  return `<table><thead><tr>
+    <th>Paciente</th><th>Diagnóstico</th><th>Lat.</th><th>Medicação</th>
+    <th>Tipo</th><th>Próx. Consulta/OCT</th><th>Próx. Injeção</th><th>Status</th>
+    <th>Auth.OCT</th><th>Auth.Inj.</th><th></th>
+  </tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function renderPacientes(){
+  const q      = (document.getElementById('search-pac').value||'').toLowerCase();
+  const fTipo  = document.getElementById('filt-tipo').value;
+  let list = getPac();
+  if(q)     list = list.filter(p=>p.nome.toLowerCase().includes(q)||(p.diagnostico||'').toLowerCase().includes(q)||(p.convenio||'').toLowerCase().includes(q));
+  if(fTipo) list = list.filter(p=>p.tipo===fTipo);
+
+  document.getElementById('count-pac').textContent = `${list.length} paciente(s)`;
+  const div = document.getElementById('table-pac');
+
+  // MODO LISTA SIMPLES
+  if(!modoGrupos){
+    if(!list.length){ div.innerHTML='<div class="empty"><span class="ei">👥</span><p>Nenhum paciente encontrado</p></div>'; return; }
+    div.innerHTML=`<table><thead><tr>
+    <th>Paciente</th><th>Diagnóstico</th><th>Lat.</th><th>Medicação</th>
+    <th>Tipo</th><th>Próx. Consulta/OCT</th><th>Próx. Injeção</th><th>Status</th>
+    <th>Auth.OCT</th><th>Auth.Inj.</th><th></th>
+  </tr></thead><tbody>${list.map(pacienteRow).join('')}</tbody></table>`;
+    return;
+  }
+
+  // MODO GRUPOS
+  const grupos = {};
+  GRUPOS_DEF.forEach(g => grupos[g.key] = []);
+  list.forEach(p => { const g = getGrupo(p); if(grupos[g]) grupos[g].push(p); });
+
+  // Ordenação dentro de cada grupo
+  grupos.urgente.sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+  grupos.auth.sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+  grupos.agendar.sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+  grupos.ok.sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+
+  div.innerHTML = GRUPOS_DEF.map(g => {
+    const pacs = grupos[g.key] || [];
+    const count = pacs.length;
+    const startOpen = (g.open && count > 0) || false;
+    return `
+    <div class="grupo-section ${g.cls}">
+      <div class="grupo-header" onclick="toggleGrupo('${g.key}')">
+        <div class="grupo-header-left">
+          <span style="font-size:18px">${g.icon}</span>
+          <div>
+            <h3>${g.title}</h3>
+            <div class="grupo-desc">${g.desc}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="grupo-count">${count} paciente${count!==1?'s':''}</span>
+          <span class="grupo-chevron${startOpen?' open':''}" id="grupo-chev-${g.key}">▼</span>
+        </div>
+      </div>
+      <div class="grupo-body${startOpen?' open':''}" id="grupo-body-${g.key}">
+        ${tableWrap(pacs.map(pacienteRow))}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let agendaViewMode='semana';
+function setView(v,btn){agendaViewMode=v;document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAgenda();}
+
+function renderAgenda(){
+  const fTipo=document.getElementById('filt-agenda-tipo').value;
+  const end=agendaViewMode==='semana'?addDays(todayStr(),7):addDays(todayStr(),30);
+  const pac=getPac().filter(p=>['ativo','observacao'].includes(p.statusPaciente));
+  let events=[];
+  pac.forEach(p=>{
+    const isObs=p.statusPaciente==='observacao';
+    if(!isObs&&p.proximaInjecao&&p.proximaInjecao!==''&&p.proximaInjecao>=todayStr()&&p.proximaInjecao<=end)
+      events.push({date:p.proximaInjecao,tipo:'injecao',p,label:`💉 Injeção — ${medBadge(p.medicacao)}`,color:'var(--red)'});
+    if(p.proximaConsulta&&p.proximaConsulta!==''&&p.proximaConsulta>=todayStr()&&p.proximaConsulta<=end)
+      events.push({date:p.proximaConsulta,tipo:'consulta',p,label:`🩺 Consulta${isObs?' (Observação)':''}`,color:'var(--green)'});
+    const oct=isObs?(p.proximoOCTObservacao||p.proximoOCT||''):p.proximoOCT||'';
+    if(oct&&oct!==''&&oct>=todayStr()&&oct<=end&&oct!==p.proximaConsulta)
+      events.push({date:oct,tipo:'oct',p,label:'📷 OCT',color:'var(--blue)'});
+  });
+  if(fTipo) events=events.filter(e=>e.tipo===fTipo);
+  events.sort((a,b)=>a.date.localeCompare(b.date));
+  const byDate={};
+  events.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
+  const div=document.getElementById('agenda-content');
+  if(!Object.keys(byDate).length){div.innerHTML='<div class="empty"><span class="ei">📅</span><p>Nenhum procedimento no período</p></div>';return;}
+  div.innerHTML=Object.entries(byDate).map(([date,evts])=>`<div class="agenda-day"><div class="agenda-day-label">${fmtFull(date)}</div>${evts.map(e=>`<div class="agenda-item" style="border-color:${e.color}"><div><div style="font-weight:600">${e.p.nome} ${latBadge(e.p.lateral)}</div><div style="font-size:11px;color:var(--gray)">${e.label} · ${e.p.diagnostico} · ${e.p.medico}</div></div><div style="display:flex;gap:5px;align-items:center">${tipoBadge(e.p.tipo)}${statusBadge(e.p)}<button class="btn btn-sm btn-outline" onclick="verDetalhe('${e.p.id}')">Ver</button></div></div>`).join('')}</div>`).join('');
+}
+
+function renderAutorizacoes(){
+  const pac=getPac().filter(p=>['ativo','observacao'].includes(p.statusPaciente)&&p.tipo==='convenio');
+  const div=document.getElementById('table-auth');
+  if(!pac.length){div.innerHTML='<div class="empty"><span class="ei">📋</span><p>Nenhum paciente convênio</p></div>';return;}
+  div.innerHTML=`<table>
+    <thead><tr>
+      <th>Paciente</th><th>Convênio</th><th>Medicação</th><th>Próx.Injeção</th><th>Status</th>
+      <th>📷 Auth. OCT</th><th>💉 Auth. Injeção</th><th>Ações</th>
+    </tr></thead>
+    <tbody>${pac.map(p=>`<tr>
+      <td><div style="font-weight:600">${p.nome}</div><div style="font-size:10px;color:var(--gray)">${p.diagnostico} · ${p.lateral}</div></td>
+      <td style="font-size:12px">${p.convenio||'—'}</td>
+      <td><span class="badge badge-navy" style="font-size:10px">${medBadge(p.medicacao)}</span></td>
+      <td style="font-size:12px">${fmtDate(p.proximaInjecao)||'—'}<br>${statusBadge(p)}</td>
+      <td>${statusBadge(p)}</td>
+      <td>
+        ${authOCTBadge(p)}<br>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓</button>
+          <button class="btn btn-sm btn-danger"  onclick="setAuthOCT('${p.id}','negado')">✗</button>
+          <button class="btn btn-sm btn-outline" onclick="setAuthOCT('${p.id}','pendente')">⏳</button>
+        </div>
+      </td>
+      <td>
+        ${authInjBadge(p)}<br>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓</button>
+          <button class="btn btn-sm btn-danger"  onclick="setAuthInj('${p.id}','negado')">✗</button>
+          <button class="btn btn-sm btn-outline" onclick="setAuthInj('${p.id}','pendente')">⏳</button>
+        </div>
+      </td>
+      <td><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function setAuthOCT(id,status){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.statusAuthOCT=status; atualizarCache(p); renderAutorizacoes(); updateNavBadges(getPac());
+  await persistir(p,false);
+}
+
+async function setAuthInj(id,status){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.statusAuthInj=status; atualizarCache(p); renderAutorizacoes(); updateNavBadges(getPac());
+  await persistir(p,false);
+}
+
+function updateNavBadges(pac){
+  const alertas=getAlertas(pac.filter(p=>p.statusPaciente==='ativo'));
+  const authPend=pac.filter(p=>['ativo','observacao'].includes(p.statusPaciente)&&p.tipo==='convenio'&&(p.statusAuthOCT!=='autorizado'||p.statusAuthInj!=='autorizado')).length;
+  const setB=(id,c)=>{const el=document.getElementById(id);el.textContent=c;el.style.display=c>0?'inline-block':'none';};
+  setB('nb-dashboard',alertas.length);setB('nb-alertas',alertas.length);setB('nb-auth',authPend);
+}
+
+function renderAll(){
+  const sec=document.querySelector('.section.active')?.id?.replace('section-','');
+  if(sec==='dashboard')    renderDashboard();
+  if(sec==='pacientes')    renderPacientes();
+  if(sec==='alertas')      renderAlertasPage();
+  if(sec==='agenda')       renderAgenda();
+  if(sec==='autorizacoes') renderAutorizacoes();
+  updateNavBadges(getPac());
+}
+
+function showToast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>t.remove(),4500);
+}
+
+// ════════════════════════════════════════════════════
+// COMANDO DE VOZ
+// ════════════════════════════════════════════════════
+const ANTHROPIC_KEY = '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';
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640;
+
+let recognition = null;
+let vozInterpretado = null; // resultado da IA
+let vozTranscrito  = '';
+
+function renderVoz(){
+  const div = document.getElementById('voz-container');
+  div.innerHTML = `
+    <div class="voz-card">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--navy)">🎙️ Comando de Voz</h3>
+      <p style="font-size:13px;color:var(--gray);margin-bottom:18px">Fale ou digite uma atualização — a IA interpreta e atualiza o banco automaticamente.</p>
+
+      <div class="voz-hint">
+        <strong>Exemplos do que você pode dizer:</strong>
+        <ul class="voz-examples" style="margin-top:4px;padding-left:16px;">
+          <li>"Antônio Carlos fez Eylia 8mg no olho direito hoje, retorno em 8 semanas"</li>
+          <li>"Deise Soares fez Vabysmo OE em 17/06, próxima em 6 semanas"</li>
+          <li>"Gerson Carakushansky está em observação, OCT em 12 semanas"</li>
+          <li>"Eva de Jesus não realizou a injeção, reagendar em 4 semanas"</li>
+        </ul>
+      </div>
+
+      <button class="voz-mic-btn${isMobile?' mobile':''}" id="voz-mic-btn" onclick="toggleGravacao()" title="Clique para gravar">
+        🎙️
+      </button>
+
+      <div class="voz-status" id="voz-status">Toque no microfone para começar a gravar</div>
+
+      <textarea class="voz-transcript" id="voz-text" placeholder="Ou digite aqui o que aconteceu com o paciente..." rows="${isMobile?4:3}"></textarea>
+
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" style="flex:1" onclick="interpretarTexto()">🤖 Interpretar e Atualizar</button>
+        <button class="btn btn-outline" onclick="limparVoz()">✕ Limpar</button>
+      </div>
+    </div>
+
+    <div id="voz-resultado-area"></div>
+    <div id="voz-confirmacao-area"></div>`;
+}
+
+// ── GRAVAÇÃO ──
+let vozGravando = false;
+let vozTranscriptAcumulado = '';
+
+function toggleGravacao(){
+  if(vozGravando){
+    pararGravacao();
+  } else {
+    iniciarGravacao();
+  }
+}
+
+function iniciarGravacao(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    alert('Seu navegador não suporta reconhecimento de voz. Use o Chrome.');
+    return;
+  }
+
+  vozGravando = true;
+  vozTranscriptAcumulado = document.getElementById('voz-text').value || '';
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  const btn = document.getElementById('voz-mic-btn');
+  const status = document.getElementById('voz-status');
+  btn.classList.add('recording');
+  btn.innerHTML = '⏹️';
+  btn.title = 'Clique para parar a gravação';
+  status.innerHTML = '🔴 <strong>Gravando...</strong> Fale à vontade. Clique novamente no botão para parar.';
+
+  let finalTranscript = '';
+
+  recognition.onresult = e => {
+    let interim = '';
+    finalTranscript = '';
+    for(let i = 0; i < e.results.length; i++){
+      if(e.results[i].isFinal){
+        finalTranscript += e.results[i][0].transcript + ' ';
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    const full = (vozTranscriptAcumulado + ' ' + finalTranscript + interim).trim();
+    document.getElementById('voz-text').value = full;
+  };
+
+  recognition.onend = () => {
+    // Se ainda estiver no modo gravando (não foi parado manualmente),
+    // reinicia automaticamente para manter contínuo
+    if(vozGravando){
+      vozTranscriptAcumulado = document.getElementById('voz-text').value || '';
+      try { recognition.start(); } catch(e){}
+    }
+  };
+
+  recognition.onerror = e => {
+    if(e.error === 'no-speech') return; // ignorar silêncio
+    if(e.error === 'aborted') return;   // parada manual
+    const status = document.getElementById('voz-status');
+    if(status) status.textContent = '⚠️ Erro: ' + e.error;
+    vozGravando = false;
+    const btn = document.getElementById('voz-mic-btn');
+    if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; btn.title='Clique para gravar'; }
+  };
+
+  recognition.start();
+}
+
+function pararGravacao(){
+  vozGravando = false;
+  if(recognition){
+    try { recognition.stop(); } catch(e){}
+  }
+  const btn = document.getElementById('voz-mic-btn');
+  const status = document.getElementById('voz-status');
+  if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; btn.title='Clique para gravar'; }
+  if(status) status.textContent = '✓ Gravação concluída — clique em Interpretar e Atualizar';
+}
+
+// ── INTERPRETAR COM IA ──
+async function interpretarTexto(){
+  const texto = (document.getElementById('voz-text').value || '').trim();
+  if(!texto){ alert('Digite ou grave um comando primeiro.'); return; }
+
+  const resArea = document.getElementById('voz-resultado-area');
+  const confArea = document.getElementById('voz-confirmacao-area');
+  resArea.innerHTML = `<div class="voz-card" style="text-align:center;padding:24px"><div style="font-size:28px;margin-bottom:10px">🤖</div><p style="color:var(--gray)">Interpretando comando...</p></div>`;
+  confArea.innerHTML = '';
+
+  // Montar lista de pacientes para a IA
+  const pacientes = getPac().filter(p=>['ativo','observacao'].includes(p.statusPaciente));
+  const listaNomes = pacientes.map(p=>`${p.nome} (${p.lateral}, ${medBadge(p.medicacao)})`).join('\n');
+
+  const prompt = `Você é um assistente médico que interpreta comandos de voz sobre pacientes oftalmológicos crônicos em tratamento com injeções intravítreas.
+
+LISTA DE PACIENTES ATIVOS:
+${listaNomes}
+
+COMANDO RECEBIDO: "${texto}"
+
+DATA DE HOJE: ${todayStr()}
+
+Interprete o comando e retorne APENAS um JSON válido (sem markdown, sem explicações) com esta estrutura exata:
+{
+  "acao": "registrar_injecao" | "confirmar_injecao" | "observacao" | "nao_realizado" | "nao_identificado",
+  "paciente_nome": "nome exato como consta na lista acima",
+  "paciente_encontrado": true | false,
+  "data": "YYYY-MM-DD",
+  "olho": "OD" | "OE" | "AO",
+  "medicacao": "Eylia 2mg (Aflibercept)" | "Eylia 8mg (Aflibercept HD)" | "Vabysmo (Faricimabe)" | "Avastin (Bevacizumab)" | "Ozurdex (Dexametasona)",
+  "intervalo_semanas": 4 | 6 | 8 | 10 | 12,
+  "obs": "observação clínica se mencionada",
+  "resumo": "resumo em português do que será feito",
+  "erro": "mensagem de erro se não conseguir interpretar"
+}
+
+Regras:
+- Se o paciente não for encontrado na lista, paciente_encontrado=false e acao="nao_identificado"
+- Se a data não for mencionada, use hoje: ${todayStr()}
+- Se o olho não for mencionado, use o lateral padrão do paciente
+- "Eylia" ou "Alia" ou "aflibercept" 2mg = "Eylia 2mg (Aflibercept)"
+- "Eylia 8" ou "Alia 8" ou "aflibercept HD" = "Eylia 8mg (Aflibercept HD)"
+- "Vabysmo" ou "faricimabe" = "Vabysmo (Faricimabe)"
+- "Avastin" ou "bevacizumabe" = "Avastin (Bevacizumab)"
+- "Ozurdex" = "Ozurdex (Dexametasona)"
+- "observação" ou "sem injeção" ou "observe and extend" = acao "observacao"
+- "não fez" ou "não realizou" = acao "nao_realizado"`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error.message);
+
+    // Limpar markdown caso o modelo retorne ```json ... ```
+    let rawText = data.content[0].text.trim();
+    rawText = rawText.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+    const json = JSON.parse(rawText);
+    vozInterpretado = json;
+    vozInterpretado._paciente = pacientes.find(p => p.nome === json.paciente_nome);
+    mostrarResultado(json);
+
+  } catch(e) {
+    resArea.innerHTML = `<div class="voz-card"><div class="voz-resultado erro"><div class="vr-title">❌ Erro na interpretação</div><p style="font-size:13px">${e.message}</p></div></div>`;
+  }
+}
+
+function mostrarResultado(j){
+  const resArea = document.getElementById('voz-resultado-area');
+  const confArea = document.getElementById('voz-confirmacao-area');
+
+  if(!j.paciente_encontrado || j.acao === 'nao_identificado'){
+    resArea.innerHTML = `<div class="voz-card"><div class="voz-resultado erro">
+      <div class="vr-title">❌ Paciente não identificado</div>
+      <p style="font-size:13px;color:#991b1b">Não encontrei "${j.paciente_nome || 'nome não identificado'}" na lista de pacientes ativos. Verifique o nome e tente novamente.</p>
+    </div></div>`;
+    confArea.innerHTML = '';
+    return;
+  }
+
+  const acaoLabels = {
+    registrar_injecao: '💉 Registrar Injeção',
+    confirmar_injecao: '✅ Confirmar Injeção Realizada',
+    observacao:        '🔍 Iniciar Protocolo de Observação',
+    nao_realizado:     '🔄 Reagendar (Paciente Não Realizou)',
+  };
+
+  const p = vozInterpretado._paciente;
+  const novas = j.acao !== 'observacao' ? calcDatas(j.data, j.intervalo_semanas, unidadeAtual) : calcDatasObs(j.data, j.intervalo_semanas);
+
+  resArea.innerHTML = `<div class="voz-card">
+    <div class="voz-resultado">
+      <div class="vr-title">✓ Comando interpretado</div>
+      <div class="voz-campo"><span class="vc-label">Ação</span><span class="vc-val">${acaoLabels[j.acao]||j.acao}</span></div>
+      <div class="voz-campo"><span class="vc-label">Paciente</span><span class="vc-val">${j.paciente_nome}</span></div>
+      ${j.acao !== 'observacao' ? `<div class="voz-campo"><span class="vc-label">Medicação</span><span class="vc-val">${j.medicacao||p.medicacao}</span></div>` : ''}
+      ${j.acao !== 'observacao' ? `<div class="voz-campo"><span class="vc-label">Olho</span><span class="vc-val">${j.olho||p.lateral}</span></div>` : ''}
+      <div class="voz-campo"><span class="vc-label">Data</span><span class="vc-val">${fmtDate(j.data)}</span></div>
+      <div class="voz-campo"><span class="vc-label">Intervalo</span><span class="vc-val">${j.intervalo_semanas} semanas</span></div>
+      ${j.acao !== 'observacao'
+        ? `<div class="voz-campo"><span class="vc-label">💉 Próx. injeção</span><span class="vc-val" style="color:var(--navy)">${fmtDate(novas.proxInj)}</span></div>
+           <div class="voz-campo"><span class="vc-label">🩺 Consulta</span><span class="vc-val">${fmtDate(novas.proxConsulta)}</span></div>`
+        : `<div class="voz-campo"><span class="vc-label">📷 Próx. OCT</span><span class="vc-val">${fmtDate(novas.proxOCT)}</span></div>`
+      }
+      ${j.obs ? `<div class="voz-campo"><span class="vc-label">Obs.</span><span class="vc-val">${j.obs}</span></div>` : ''}
+    </div>
+    <div class="voz-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="confirmarComandoVoz()">✓ Confirmar e Salvar</button>
+      <button class="btn btn-outline" onclick="limparVoz()">✕ Cancelar</button>
+    </div>
+  </div>`;
+  confArea.innerHTML = '';
+}
+
+async function confirmarComandoVoz(){
+  if(!vozInterpretado || !vozInterpretado._paciente) return;
+  const j = vozInterpretado;
+  const p = j._paciente;
+  const pac = getPac();
+  const target = pac.find(x=>x.id===p.id);
+  if(!target){ showToast('❌ Paciente não encontrado no cache'); return; }
+
+  const novas = j.acao !== 'observacao' ? calcDatas(j.data, j.intervalo_semanas, unidadeAtual) : calcDatasObs(j.data, j.intervalo_semanas);
+
+  if(j.acao === 'registrar_injecao' || j.acao === 'confirmar_injecao'){
+    const medUsada = j.medicacao || target.medicacao;
+    const trocouMed = medUsada !== target.medicacao;
+    const dosesAnt = getDosesFeitas(target);
+    const totalCarreg = dosesCarreg(medUsada);
+    const novasDoses = dosesAnt + 1;
+
+    target.injecoes.push({
+      id:genId(), data:j.data,
+      olho:j.olho||target.lateral,
+      med:medUsada, intervalo:j.intervalo_semanas,
+      obs:j.obs||'Registrado por comando de voz',
+      relatorio:false, octSolicitado:false,
+      doseCarregamento: novasDoses<=totalCarreg?novasDoses:null,
+      trocaMedicacao: trocouMed?target.medicacao:null
+    });
+    target.ultimaInjecao = j.data;
+    target.intervalo = j.intervalo_semanas;
+    target.lateral = j.olho || target.lateral;
+    if(trocouMed) target.medicacao = medUsada;
+    target.dosesCarregamentoFeitas = novasDoses;
+    if(['3-carregamento','4-carregamento'].includes(target.protocolo) && novasDoses >= totalCarreg)
+      target.protocolo = 'tratar-estender';
+    target.proximaInjecao = novas.proxInj;
+    target.proximaConsulta = novas.proxConsulta;
+    target.proximoOCT = novas.proxOCT;
+    target.aguardandoConfirmacao = false;
+    target.statusPaciente = 'ativo';
+    target.modoObservacao = false;
+    target.statusAuth = target.tipo==='convenio'?'pendente':'n/a';
+    target.statusAuthOCT = target.tipo==='convenio'?'pendente':'n/a';
+    target.statusAuthInj = target.tipo==='convenio'?'pendente':'n/a';
+
+  } else if(j.acao === 'observacao'){
+    target.statusPaciente = 'observacao';
+    target.modoObservacao = true;
+    target.proximoOCTObservacao = novas.proxOCT;
+    target.proximaConsulta = novas.proxConsulta;
+    target.proximaInjecao = '';
+    target.aguardandoConfirmacao = false;
+    target.obs = (target.obs?target.obs+' | ':'') + `Observação via voz (${todayStr()})`;
+
+  } else if(j.acao === 'nao_realizado'){
+    target.aguardandoConfirmacao = false;
+    target.proximaInjecao = novas.proxInj;
+    target.proximaConsulta = novas.proxConsulta;
+    target.proximoOCT = novas.proxOCT;
+  }
+
+  atualizarCache(target);
+  document.getElementById('voz-resultado-area').innerHTML = `<div class="voz-card" style="text-align:center;padding:24px">
+    <div style="font-size:40px;margin-bottom:10px">✅</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:6px">${target.nome}</div>
+    <div style="color:var(--gray);font-size:13px">Atualizado com sucesso! Próxima injeção: <strong>${fmtDate(target.proximaInjecao)||'—'}</strong></div>
+    <button class="btn btn-outline" style="margin-top:16px" onclick="limparVoz()">Novo comando</button>
+  </div>`;
+  document.getElementById('voz-confirmacao-area').innerHTML = '';
+
+  showToast(`✅ ${target.nome} — atualizado via comando de voz`);
+  await persistir(target, false);
+  updateNavBadges(getPac());
+}
+
+function limparVoz(){
+  vozInterpretado = null;
+  vozGravando = false;
+  vozTranscriptAcumulado = '';
+  if(recognition){ try{ recognition.stop(); }catch(e){} }
+  const t = document.getElementById('voz-text');
+  if(t) t.value = '';
+  const s = document.getElementById('voz-status');
+  if(s) s.textContent = 'Toque no microfone para começar a gravar';
+  const btn = document.getElementById('voz-mic-btn');
+  if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; }
+  const r = document.getElementById('voz-resultado-area');
+  if(r) r.innerHTML = '';
+  const c = document.getElementById('voz-confirmacao-area');
+  if(c) c.innerHTML = '';
+}
+// ════════════════════════════════════════════════════
+// SISTEMA DE SENHAS + TELA INICIAL
+// ════════════════════════════════════════════════════
+const SENHAS = {
+  citta:       'citta@123',
+  riovision:   'rvh@123',
+  consultorio: 'edu@123'
+};
+
+function senhaKey(u){ return `auth_${u}_v1`; }
+function isAutenticado(u){ return sessionStorage.getItem(senhaKey(u)) === 'ok'; }
+
+function mostrarTelaInicial(){
+  document.getElementById('tela-inicial').classList.remove('hidden');
+  document.getElementById('senha-overlay').classList.add('hidden');
+}
+
+// Chamado pelos cards da tela inicial
+function selecionarUnidadeInicial(u){
+  document.getElementById('tela-inicial').classList.add('hidden');
+  pedirSenha(u, ()=>{ _aplicarUnidade(u); }, true);
+}
+
+function _aplicarUnidade(u){
+  unidadeAtual = u;
+  localStorage.setItem('unidade_atual', u);
+  document.getElementById('tela-inicial').classList.add('hidden');
+  document.getElementById('senha-overlay').classList.add('hidden');
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-msg').textContent = 'Carregando pacientes...';
+  document.querySelectorAll('.unidade-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('u-' + u).classList.add('active');
+  const cfg = UNIDADES[u];
+  const pill = document.getElementById('unidade-pill');
+  pill.textContent = cfg.nome;
+  pill.className = 'unidade-pill ' + cfg.pill;
+  recarregarDados();
+}
+
+function pedirSenha(u, callback, podeVoltar=false){
+  const overlay = document.getElementById('senha-overlay');
+  const cfg     = UNIDADES[u];
+  document.getElementById('senha-titulo').textContent = cfg.nome;
+  const lbl = document.getElementById('senha-unidade-label');
+  lbl.textContent = cfg.nome;
+  lbl.className   = 'senha-unidade ' + cfg.pill;
+  document.getElementById('senha-input').value = '';
+  document.getElementById('senha-erro').textContent = '';
+  document.getElementById('senha-voltar-btn').style.display = podeVoltar ? '' : 'none';
+  overlay.classList.remove('hidden');
+  overlay._unidade  = u;
+  overlay._callback = callback;
+  setTimeout(()=>document.getElementById('senha-input').focus(), 100);
+}
+
+function cancelarSenha(){
+  // Sempre volta para a tela de seleção de unidade
+  document.getElementById('senha-overlay').classList.add('hidden');
+  // Restaura botão da unidade atual na sidebar (se já estava em uma)
+  if(unidadeAtual){
+    document.querySelectorAll('.unidade-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('u-'+unidadeAtual).classList.add('active');
+  }
+  mostrarTelaInicial();
+}
+
+function verificarSenha(){
+  const overlay  = document.getElementById('senha-overlay');
+  const u        = overlay._unidade;
+  const digitada = document.getElementById('senha-input').value;
+  if(digitada === SENHAS[u]){
+    sessionStorage.setItem(senhaKey(u), 'ok');
+    overlay.classList.add('hidden');
+    if(overlay._callback) overlay._callback();
+  } else {
+    document.getElementById('senha-erro').textContent = '❌ Senha incorreta. Tente novamente.';
+    document.getElementById('senha-input').value = '';
+    document.getElementById('senha-input').focus();
+  }
+}
+
+function setUnidade(u){
+  if(!isAutenticado(u)){
+    pedirSenha(u, ()=>{ _aplicarUnidade(u); }, true);
+    return;
+  }
+  _aplicarUnidade(u);
+}
+
+async function carregarInicial(){
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-msg').textContent='Carregando pacientes...';
+  const cfg=UNIDADES[unidadeAtual];
+  document.querySelectorAll('.unidade-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('u-'+unidadeAtual).classList.add('active');
+  const pill=document.getElementById('unidade-pill');
+  pill.textContent=cfg.nome; pill.className='unidade-pill '+cfg.pill;
+  await recarregarDados();
+  document.getElementById('loading-overlay').classList.add('hidden');
+}
+
+function init(){
+  document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('np-data1').value=todayStr();
+  toggleConv('np');
+
+  if(!WEBAPP_URL||WEBAPP_URL==='COLE_AQUI_A_URL_DO_WEBAPP'){
+    document.getElementById('tela-inicial').classList.add('hidden');
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    document.getElementById('loading-msg').textContent='⚠️ Configure a URL do Web App no arquivo HTML';
+    document.getElementById('loading-overlay').style.background='rgba(220,38,38,0.9)';
+    return;
+  }
+  // Sempre começa na tela de seleção — tela-inicial já está visível por padrão
+}
+
+init();
+</script>
+</body>
+</html>
