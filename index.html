@@ -1779,16 +1779,92 @@ function renderBI(){
   const pac = getPac();
   const todos = pac.filter(p => p.statusPaciente !== 'obito');
   const ativos = pac.filter(p => p.statusPaciente === 'ativo');
-
-  // ── Coletar todas injeções realizadas
   const injFeitas = [];
-  todos.forEach(p => {
-    (p.injecoes||[]).forEach(inj => {
-      injFeitas.push({ ...inj, paciente: p });
-    });
+  todos.forEach(p => { (p.injecoes||[]).forEach(inj => { injFeitas.push({...inj, paciente:p}); }); });
+  const fatPorMes = {};
+  injFeitas.forEach(inj => {
+    const m = mesAno(inj.data); if(!m) return;
+    if(!fatPorMes[m]) fatPorMes[m]={fat:0,inj:0,olhos:0};
+    fatPorMes[m].fat += faturamentoInjecao(inj); fatPorMes[m].inj += 1; fatPorMes[m].olhos += olhosInjetados(inj);
   });
-
-
+  const projPorMes = {};
+  ativos.forEach(p => {
+    if(!p.proximaInjecao||!isValidDate(p.proximaInjecao)) return;
+    const m = mesAno(p.proximaInjecao); if(!m) return;
+    if(!projPorMes[m]) projPorMes[m]={fat:0,inj:0};
+    projPorMes[m].fat += faturamentoProjetado(p); projPorMes[m].inj += 1;
+  });
+  const todosMesesAll = [...new Set([...Object.keys(fatPorMes),...Object.keys(projPorMes)])].sort();
+  const sel = document.getElementById('bi-filtro-mes');
+  const selVal = sel ? sel.value : '';
+  if(sel) sel.innerHTML = '<option value="">Todos os meses</option>' + todosMesesAll.map(m=>`<option value="${m}" ${m===selVal?'selected':''}>${mesAnoLabel(m)}</option>`).join('');
+  const mesFiltro = sel ? sel.value : '';
+  const injFiltradas = mesFiltro ? injFeitas.filter(i=>mesAno(i.data)===mesFiltro) : injFeitas;
+  const fatFiltrado = injFiltradas.reduce((s,i)=>s+faturamentoInjecao(i),0);
+  const totalOlhosFiltrado = injFiltradas.reduce((s,i)=>s+olhosInjetados(i),0);
+  const projFiltrada = mesFiltro ? (projPorMes[mesFiltro]||{fat:0,inj:0}) : {fat:Object.values(projPorMes).reduce((s,m)=>s+m.fat,0),inj:Object.values(projPorMes).reduce((s,m)=>s+m.inj,0)};
+  const labelFiltro = mesFiltro ? `— ${mesAnoLabel(mesFiltro)}` : '';
+  const infoEl = document.getElementById('bi-filtro-info');
+  if(infoEl) infoEl.textContent = mesFiltro ? `Mostrando: ${mesAnoLabel(mesFiltro)}` : '';
+  const ultimos6 = mesFiltro ? [mesFiltro] : todosMesesAll.slice(-6);
+  const atrasados = ativos.filter(p=>getStatus(p)==='atrasado').length;
+  const taxaAdesao = ativos.length>0 ? Math.round(((ativos.length-atrasados)/ativos.length)*100) : 0;
+  const porDiag={}, porMed={};
+  todos.forEach(p=>{ const d=p.diagnostico||'Outro'; porDiag[d]=(porDiag[d]||0)+1; const m=medBadge(p.medicacao)||'Outro'; porMed[m]=(porMed[m]||0)+1; });
+  const intervalos=[4,6,8,10,12,14,16,18,20];
+  const porInterv={};
+  intervalos.forEach(i=>porInterv[i]=0);
+  ativos.forEach(p=>{ const i=parseInt(p.intervalo)||4; porInterv[i]=(porInterv[i]||0)+1; });
+  const nConv=todos.filter(p=>p.tipo==='convenio').length, nPart=todos.filter(p=>p.tipo==='particular').length;
+  const porDia={2:0,4:0};
+  injFeitas.forEach(inj=>{ if(!inj.data||!isValidDate(inj.data)) return; const d=new Date(inj.data+'T12:00:00').getDay(); porDia[d]=(porDia[d]||0)+1; });
+  let totalMesesProt=0, comData=0;
+  todos.forEach(p=>{ if(p.dataInicio&&isValidDate(p.dataInicio)){ totalMesesProt+=(new Date()-new Date(p.dataInicio+'T12:00:00'))/(1000*60*60*24*30); comData++; } });
+  const tempoMedio = comData>0 ? Math.round(totalMesesProt/comData) : 0;
+  const mesesComFat = Object.values(fatPorMes);
+  const mediaMensal = mesesComFat.length>0 ? mesesComFat.reduce((s,m)=>s+m.fat,0)/mesesComFat.length : 0;
+  const projecaoAnual = Math.round(mediaMensal*12);
+  const proxMesProj = Object.keys(projPorMes).sort()[0];
+  const CORES=['#1a2550','#a07830','#2563eb','#16a34a','#dc2626','#7c3aed','#0891b2','#d97706','#475569'];
+  const fmtBRL = v => 'R$ '+Math.round(v).toLocaleString('pt-BR');
+  const barChart = (items,maxVal,colorFn) => {
+    if(!items.length) return '<div style="color:var(--gray);font-size:12px;padding:8px 0">Sem dados</div>';
+    return items.map(([label,val],i)=>`<div class="bi-bar-row"><div class="bi-bar-label">${label}</div><div class="bi-bar-track"><div class="bi-bar-fill" style="width:${maxVal>0?Math.round((val/maxVal)*100):0}%;background:${colorFn(i)}"></div></div><div class="bi-bar-val">${val}</div></div>`).join('');
+  };
+  const proxMesLabel = mesFiltro ? 'Projetado '+mesAnoLabel(mesFiltro) : 'Projeção Próximo Mês';
+  const proxMesFat = mesFiltro ? projFiltrada.fat : (projPorMes[proxMesProj]?.fat||0);
+  const proxMesInj = mesFiltro ? projFiltrada.inj : (projPorMes[proxMesProj]?.inj||0);
+  document.getElementById('bi-content').innerHTML = '<div class="bi-section-title">\u{1F4B0} Financeiro</div>'
+  + '<div class="bi-grid">'
+  + '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Faturamento Realizado '+labelFiltro+'</div><div class="bk-value" style="color:var(--green)">'+fmtBRL(fatFiltrado)+'</div><div class="bk-sub">'+injFiltradas.length+' injeções · '+totalOlhosFiltrado+' olhos</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--blue)"><div class="bk-label">'+proxMesLabel+'</div><div class="bk-value" style="color:var(--blue)">'+fmtBRL(proxMesFat)+'</div><div class="bk-sub">'+proxMesInj+' injeções agendadas</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Projeção Anual</div><div class="bk-value" style="color:var(--gold)">'+fmtBRL(projecaoAnual)+'</div><div class="bk-sub">baseado na média mensal</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--navy)"><div class="bk-label">Ticket Médio / Injeção</div><div class="bk-value">'+fmtBRL(injFiltradas.length>0?fatFiltrado/injFiltradas.length:0)+'</div><div class="bk-sub">R$ '+VALOR_INJECAO+'/olho (convênio)</div></div>'
+  + '</div>'
+  + '<div class="bi-card" style="margin-bottom:16px"><h4>\u{1F4C5} Evolução Mensal</h4>'
+  + (ultimos6.length===0 ? '<div class="empty"><p>Sem dados ainda</p></div>' : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray)">Mês</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Injeções</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--green)">Realizado</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--blue)">Projetado</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Total</th></tr></thead><tbody>'
+  + ultimos6.map(m=>{ const r=fatPorMes[m]||{fat:0,inj:0}; const pj=projPorMes[m]||{fat:0,inj:0}; return '<tr style="border-top:1px solid var(--gray-light)"><td style="padding:8px 10px;font-weight:600">'+mesAnoLabel(m)+'</td><td style="padding:8px 10px;text-align:right;color:var(--gray);font-size:12px">'+(r.inj+pj.inj)+'</td><td style="padding:8px 10px;text-align:right;color:var(--green);font-weight:700">'+(r.fat>0?fmtBRL(r.fat):'—')+'</td><td style="padding:8px 10px;text-align:right;color:var(--blue);font-weight:700">'+(pj.fat>0?fmtBRL(pj.fat):'—')+'</td><td style="padding:8px 10px;text-align:right;font-weight:700">'+fmtBRL(r.fat+pj.fat)+'</td></tr>'; }).join('')
+  + '</tbody></table></div>')
+  + '</div>'
+  + '<div class="bi-section-title">\u{1F3E5} Clínico</div>'
+  + '<div class="bi-grid">'
+  + '<div class="bi-kpi" style="border-color:var(--navy)"><div class="bk-label">Pacientes Ativos</div><div class="bk-value">'+ativos.length+'</div><div class="bk-sub">+ '+pac.filter(p=>p.statusPaciente==='observacao').length+' em observação</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Taxa de Adesão</div><div class="bk-value" style="color:'+(taxaAdesao>=80?'var(--green)':taxaAdesao>=60?'var(--yellow)':'var(--red)')+'">'+taxaAdesao+'%</div><div class="bk-sub">'+(ativos.length-atrasados)+' em dia · '+atrasados+' atrasados</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--blue)"><div class="bk-label">Total Injeções</div><div class="bk-value" style="color:var(--blue)">'+injFeitas.length+'</div><div class="bk-sub">'+injFeitas.reduce((s,i)=>s+olhosInjetados(i),0)+' olhos tratados</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Tempo Médio no Protocolo</div><div class="bk-value" style="color:var(--gold)">'+tempoMedio+'</div><div class="bk-sub">meses de acompanhamento</div></div>'
+  + '</div>'
+  + '<div class="bi-grid-3">'
+  + '<div class="bi-card"><h4>\u{1F52C} Por Diagnóstico</h4>'+barChart(Object.entries(porDiag).sort((a,b)=>b[1]-a[1]),Math.max(...Object.values(porDiag),1),i=>CORES[i%CORES.length])+'</div>'
+  + '<div class="bi-card"><h4>\u{1F489} Por Medicação</h4>'+barChart(Object.entries(porMed).sort((a,b)=>b[1]-a[1]),Math.max(...Object.values(porMed),1),i=>CORES[i%CORES.length])+'</div>'
+  + '<div class="bi-card"><h4>\u{1F3E5} Tipo de Atendimento</h4>'+barChart([['Particular',nPart],['Convênio',nConv]],Math.max(nPart,nConv,1),i=>i===0?'#a07830':'#2563eb')
+  + '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-light)"><div style="font-size:11px;color:var(--gray);margin-bottom:6px">Faturamento por tipo '+labelFiltro+'</div><div style="display:flex;gap:16px"><div><div style="font-size:10px;color:var(--gold);font-weight:700">PARTICULAR</div><div style="font-weight:700">'+fmtBRL(injFiltradas.filter(i=>i.paciente.tipo==='particular').reduce((s,i)=>s+faturamentoInjecao(i),0))+'</div></div><div><div style="font-size:10px;color:var(--blue);font-weight:700">CONVÊNIO</div><div style="font-weight:700">'+fmtBRL(injFiltradas.filter(i=>i.paciente.tipo==='convenio').reduce((s,i)=>s+faturamentoInjecao(i),0))+'</div></div></div></div></div>'
+  + '</div>'
+  + '<div class="bi-grid-2">'
+  + '<div class="bi-card"><h4>\u{1F5D3}\uFE0F Distribuição por Intervalo</h4>'+barChart(intervalos.filter(i=>porInterv[i]>0).map(i=>[i+' semanas',porInterv[i]]),Math.max(...intervalos.map(i=>porInterv[i]||0),1),i=>CORES[i%CORES.length])+'</div>'
+  + '<div class="bi-card"><h4>\u{1F4C6} Por Dia da Semana</h4>'+barChart([['Terça (Città/Cons.)',porDia[2]||0],['Quinta (Rio Vision)',porDia[4]||0]].filter(([,v])=>v>0),Math.max(porDia[2]||0,porDia[4]||0,1),i=>[CORES[0],CORES[2]][i])+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-light);font-size:11px;color:var(--gray)">Média: <strong>'+(mesesComFat.length>0?Math.round((porDia[2]||0)/mesesComFat.length):0)+' inj/terça</strong> · <strong>'+(mesesComFat.length>0?Math.round((porDia[4]||0)/mesesComFat.length):0)+' inj/quinta</strong></div></div>'
+  + '</div>'
+  + '<div style="text-align:right;font-size:11px;color:var(--gray);margin-top:8px">Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+' · R$ '+VALOR_INJECAO+'/olho (convênio)</div>';
+}
 
 // Chave API Anthropic — armazenada no navegador, nunca exposta no código
 function getAnthropicKey(){
