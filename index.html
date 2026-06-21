@@ -1636,7 +1636,14 @@ function showToast(msg){
 // ════════════════════════════════════════════════════
 // COMANDO DE VOZ
 // ════════════════════════════════════════════════════
-const ANTHROPIC_KEY = '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';
+// Chave API Anthropic — armazenada no navegador, nunca exposta no código
+function getAnthropicKey(){
+  return localStorage.getItem('anthropic_key_cronicos') || '';
+}
+function setAnthropicKey(k){
+  localStorage.setItem('anthropic_cronicos_configured', '1');
+  localStorage.setItem('anthropic_key_cronicos', k.trim());
+}
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640;
 
 let recognition = null;
@@ -1644,6 +1651,39 @@ let vozInterpretado = null; // resultado da IA
 let vozTranscrito  = '';
 
 function renderVoz(){
+  // Verificar se chave está configurada
+  if(!getAnthropicKey()){
+    document.getElementById('voz-container').innerHTML = `
+      <div class="voz-card" style="max-width:480px;margin:0 auto">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:36px;margin-bottom:10px">🔑</div>
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:6px">Configurar Chave API</h3>
+          <p style="font-size:13px;color:var(--gray)">Para usar o Comando de Voz, informe sua chave da API Anthropic. Ela será salva apenas neste navegador.</p>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Chave API Anthropic (sk-ant-...)</label>
+          <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="salvarChaveAPI()">Salvar e continuar</button>
+        <p style="font-size:11px;color:var(--gray);margin-top:10px;text-align:center">A chave fica salva só neste dispositivo e nunca é enviada para o GitHub.</p>
+      </div>`;
+    return;
+  }
+  _renderVozInterna();
+}
+
+function salvarChaveAPI(){
+  const k = document.getElementById('api-key-input').value.trim();
+  if(!k || !k.startsWith('sk-ant')){
+    alert('Chave inválida. Deve começar com sk-ant-');
+    return;
+  }
+  setAnthropicKey(k);
+  showToast('✅ Chave API configurada!');
+  renderVoz();
+}
+
+function _renderVozInterna(){
   const div = document.getElementById('voz-container');
   div.innerHTML = `
     <div class="voz-card">
@@ -1815,7 +1855,7 @@ Regras:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
+        'x-api-key': getAnthropicKey(),
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
@@ -2083,6 +2123,8 @@ function init(){
   document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   document.getElementById('np-data1').value=todayStr();
   toggleConv('np');
+
+  // Chave API configurada pelo usuário na aba Comando de Voz
 
   if(!WEBAPP_URL||WEBAPP_URL==='COLE_AQUI_A_URL_DO_WEBAPP'){
     document.getElementById('tela-inicial').classList.add('hidden');
