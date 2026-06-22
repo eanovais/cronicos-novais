@@ -479,7 +479,7 @@
       <div class="form-group"><label>Lateralidade</label><select id="np-lat"><option value="OD">OD — Olho Direito</option><option value="OE">OE — Olho Esquerdo</option><option value="AO">AO — Ambos</option></select></div>
       <div class="form-group"><label>Medicação</label><select id="np-med"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg — Aflibercept</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg — Aflibercept HD</option><option value="Vabysmo (Faricimabe)">Vabysmo — Faricimabe</option><option value="Avastin (Bevacizumab)">Avastin — Bevacizumab</option><option value="Ozurdex (Dexametasona)">Ozurdex — Dexametasona</option></select></div>
       <div class="form-group"><label>Protocolo</label><select id="np-proto"><option value="3-carregamento">3 doses carregamento</option><option value="4-carregamento">4 doses carregamento (Faricimabe)</option><option value="tratar-estender">Tratar e estender</option><option value="prn">PRN</option><option value="fixo">Intervalo fixo</option></select></div>
-      <div class="form-group"><label>Intervalo</label><select id="np-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+      <div class="form-group"><label>Intervalo</label><select id="np-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
       <div class="form-group"><label>Data da 1ª aplicação</label><input type="date" id="np-data1"></div>
       <div class="form-group"><label>Médico</label><select id="np-medico"><option value="Dr. Eduardo Novais">Dr. Eduardo Novais</option><option value="Dra. Lais Maia">Dra. Lais Maia</option><option value="Dr. Pedro Faria">Dr. Pedro Faria</option></select></div>
       <div class="form-group full"><label>Observações</label><textarea id="np-obs" rows="2"></textarea></div>
@@ -518,7 +518,7 @@
       <div class="form-group"><label>Lateralidade</label><select id="ed-lat"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO</option></select></div>
       <div class="form-group"><label>Medicação</label><select id="ed-med"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg</option><option value="Vabysmo (Faricimabe)">Vabysmo</option><option value="Avastin (Bevacizumab)">Avastin</option><option value="Ozurdex (Dexametasona)">Ozurdex</option></select></div>
       <div class="form-group"><label>Protocolo</label><select id="ed-proto"><option value="3-carregamento">3 doses carregamento</option><option value="4-carregamento">4 doses carregamento</option><option value="tratar-estender">Tratar e estender</option><option value="prn">PRN</option><option value="fixo">Intervalo fixo</option></select></div>
-      <div class="form-group"><label>Intervalo</label><select id="ed-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+      <div class="form-group"><label>Intervalo</label><select id="ed-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
       <div class="form-group"><label>Doses carregamento feitas</label><select id="ed-doses"><option value="0">0</option><option value="1">1ª feita</option><option value="2">2ª feita</option><option value="3">3ª feita (completo 3d)</option><option value="4">4ª feita (completo 4d)</option></select></div>
       <div class="form-group"><label>Médico</label><select id="ed-medico"><option value="Dr. Eduardo Novais">Dr. Eduardo Novais</option><option value="Dra. Lais Maia">Dra. Lais Maia</option><option value="Dr. Pedro Faria">Dr. Pedro Faria</option></select></div>
       <div class="form-group full"><label>Observações</label><textarea id="ed-obs" rows="2"></textarea></div>
@@ -546,7 +546,7 @@
         <div id="inj-troca-aviso" style="display:none;grid-column:1/-1"><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:8px 11px;font-size:12px;color:#92400e">⚠️ <strong>Troca de medicação</strong> — ficha será atualizada.</div></div>
         <div class="form-divider">Próximo Ciclo</div>
         <div class="form-group full" id="inj-carregamento-aviso" style="display:none"></div>
-        <div class="form-group"><label>Próximo intervalo</label><select id="inj-prox" onchange="atualizarInfoInj()"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+        <div class="form-group"><label>Próximo intervalo</label><select id="inj-prox" onchange="atualizarInfoInj()"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
         <div class="form-group"><label>Olho(s) próxima injeção</label><select id="inj-prox-olho"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO</option></select></div>
         <div class="form-group full" id="inj-info"></div>
         <div class="form-divider">Checklist</div>
@@ -568,7 +568,7 @@
       <div class="form-grid">
         <div class="form-group full"><label>Paciente</label><input type="text" id="conf-pac" readonly></div>
         <div class="form-group"><label>Data realizada</label><input type="date" id="conf-data"></div>
-        <div class="form-group"><label>Próximo intervalo</label><select id="conf-prox"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option></select></div>
+        <div class="form-group"><label>Próximo intervalo</label><select id="conf-prox"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
         <div class="form-group full" id="conf-info"></div>
       </div>
     </div>
