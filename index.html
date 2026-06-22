@@ -949,13 +949,7 @@ function renderAlertasBanner(container,alertas){
       <div class="ab-title">${p.nome} — injeção em ${a.diff} dia(s) — ${fmtDate(p.proximaInjecao)}</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)}</div>
       <div class="ab-actions"><button class="btn btn-sm btn-info" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
-      </div></div>`;
-  }).join('');
-}
-    </div></div>`;
-  }).join('');
-}
-
+  
 // ════════════════════════════════════════════════════
 // SALVAR (sempre atualiza cache + persiste no Sheets)
 // ════════════════════════════════════════════════════
