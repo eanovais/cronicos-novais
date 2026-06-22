@@ -1773,33 +1773,70 @@ function renderAutorizacoes(){
   const pac=getPac().filter(p=>['ativo','observacao','agendado','faltou'].includes(p.statusPaciente)&&p.tipo==='convenio');
   const div=document.getElementById('table-auth');
   if(!pac.length){div.innerHTML='<div class="empty"><span class="ei">📋</span><p>Nenhum paciente convênio</p></div>';return;}
-  const rows = pac.map(p=>{
+
+  function authBtns(fn, id){
+    return ['autorizado','negado','pendente'].map((s,i)=>{
+      const cls=['btn-success','btn-danger','btn-outline'][i];
+      const lbl=['✓','✗','⏳'][i];
+      const btn=document.createElement('button');
+      btn.className='btn btn-sm '+cls;
+      btn.textContent=lbl;
+      btn.onclick=()=>fn(id,s);
+      return btn;
+    });
+  }
+
+  const tbody = document.createElement('tbody');
+  pac.forEach(p=>{
     const isObs = p.statusPaciente==='observacao';
     const proxData = isObs?(p.proximoOCTObservacao||p.proximoOCT||''):(p.proximaInjecao||'');
-    const authInjCell = isObs
-      ? '<span class="badge badge-gray" style="font-size:10px">N/A — Obs.</span>'
-      : (authInjBadge(p)+'<br><div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
-        +'<button class="btn btn-sm btn-success" onclick="setAuthInj(''+p.id+'','autorizado')">✓</button>'
-        +'<button class="btn btn-sm btn-danger" onclick="setAuthInj(''+p.id+'','negado')">✗</button>'
-        +'<button class="btn btn-sm btn-outline" onclick="setAuthInj(''+p.id+'','pendente')">⏳</button></div>');
-    return '<tr>'
-      +'<td><div style="font-weight:600">'+p.nome+'</div><div style="font-size:10px;color:var(--gray)">'+p.diagnostico+' · '+p.lateral+'</div></td>'
+
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      '<td><div style="font-weight:600">'+p.nome+'</div><div style="font-size:10px;color:var(--gray)">'+p.diagnostico+' · '+p.lateral+'</div></td>'
       +'<td style="font-size:12px">'+(p.convenio||'—')+'</td>'
       +'<td><span class="badge badge-navy" style="font-size:10px">'+(isObs?'Observação':medBadge(p.medicacao))+'</span></td>'
       +'<td style="font-size:12px">'+(fmtDate(proxData)||'—')+'<br>'+statusBadge(p)+'</td>'
       +'<td>'+statusBadge(p)+'</td>'
-      +'<td>'+authOCTBadge(p)+'<br><div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
-        +'<button class="btn btn-sm btn-success" onclick="setAuthOCT(''+p.id+'','autorizado')">✓</button>'
-        +'<button class="btn btn-sm btn-danger" onclick="setAuthOCT(''+p.id+'','negado')">✗</button>'
-        +'<button class="btn btn-sm btn-outline" onclick="setAuthOCT(''+p.id+'','pendente')">⏳</button></div></td>'
-      +'<td>'+authInjCell+'</td>'
-      +'<td><button class="btn btn-sm btn-outline" onclick="verDetalhe(''+p.id+'')">Ver ficha</button></td>'
-      +'</tr>';
-  }).join('');
-  div.innerHTML='<table><thead><tr>'
+      +'<td class="td-oct">'+authOCTBadge(p)+'</td>'
+      +'<td class="td-inj">'+(isObs?'<span class="badge badge-gray" style="font-size:10px">N/A</span>':authInjBadge(p))+'</td>'
+      +'<td class="td-act"></td>';
+
+    // Add OCT auth buttons
+    const tdOCT = tr.querySelector('.td-oct');
+    const wrapOCT = document.createElement('div');
+    wrapOCT.style='display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
+    authBtns(setAuthOCT, p.id).forEach(b=>wrapOCT.appendChild(b));
+    tdOCT.appendChild(wrapOCT);
+
+    // Add Inj auth buttons (only for non-observation)
+    if(!isObs){
+      const tdINJ = tr.querySelector('.td-inj');
+      const wrapINJ = document.createElement('div');
+      wrapINJ.style='display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
+      authBtns(setAuthInj, p.id).forEach(b=>wrapINJ.appendChild(b));
+      tdINJ.appendChild(wrapINJ);
+    }
+
+    // Add Ver ficha button
+    const tdAct = tr.querySelector('.td-act');
+    const btnVer = document.createElement('button');
+    btnVer.className='btn btn-sm btn-outline';
+    btnVer.textContent='Ver ficha';
+    btnVer.onclick=()=>verDetalhe(p.id);
+    tdAct.appendChild(btnVer);
+
+    tbody.appendChild(tr);
+  });
+
+  const table=document.createElement('table');
+  table.innerHTML='<thead><tr>'
     +'<th>Paciente</th><th>Convênio</th><th>Medicação</th><th>Próx.Injeção/OCT</th><th>Status</th>'
     +'<th>📷 Auth. OCT</th><th>💉 Auth. Injeção</th><th>Ações</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+    +'</tr></thead>';
+  table.appendChild(tbody);
+  div.innerHTML='';
+  div.appendChild(table);
 }
 
 async function setAuthOCT(id,status){
