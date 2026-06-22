@@ -774,8 +774,11 @@ function calcDatasObs(fromDate,semanas){
 // STATUS & BADGES
 // ════════════════════════════════════════════════════
 function getStatus(p){
-  if(!['ativo','observacao'].includes(p.statusPaciente)) return p.statusPaciente;
+  if(['inativo','perdido','obito'].includes(p.statusPaciente)) return p.statusPaciente;
+  if(p.statusPaciente==='agendado') return 'agendado';
+  if(p.statusPaciente==='faltou')   return 'faltou';
   if(p.statusPaciente==='observacao') return 'observacao';
+  if(!['ativo'].includes(p.statusPaciente)) return p.statusPaciente;
   if(!p.proximaInjecao||p.proximaInjecao==='') return 'sem-data';
   const diff=daysDiff(p.proximaInjecao);
   if(p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true') return 'confirmacao';
@@ -793,6 +796,9 @@ function statusBadge(p){
   if(s==='em-dia')      return `<span class="badge badge-green">✓ Em dia</span>`;
   if(s==='observacao')  return `<span class="badge badge-teal">🔍 Observação</span>`;
   if(s==='sem-data')    return `<span class="badge badge-gray">⚙ Completar dados</span>`;
+  if(s==='agendado')    return `<span class="badge badge-blue">📅 Agendado</span>`;
+  if(s==='faltou')      return `<span class="badge badge-red">✗ Faltou</span>`;
+  if(s==='resgatado')   return `<span class="badge badge-yellow">🔄 Resgatado</span>`;
   if(s==='inativo')     return `<span class="badge badge-slate">■ Inativo</span>`;
   if(s==='perdido')     return `<span class="badge badge-red">👤 Perda seguimento</span>`;
   if(s==='obito')       return `<span class="badge badge-slate">✝ Óbito</span>`;
@@ -840,20 +846,60 @@ function emCarregamento(p){
 // ALERTAS
 // ════════════════════════════════════════════════════
 function getAlertas(pac){
-  return pac.filter(p=>p.statusPaciente==='ativo'&&p.proximaInjecao&&p.proximaInjecao!=='').map(p=>{
-    const diff=daysDiff(p.proximaInjecao);
-    const aguard=p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
-    if(aguard)   return {tipo:'confirmacao',p,diff};
-    if(diff<0)   return {tipo:'atrasado',p,diff};
-    if(diff<=7)  return {tipo:'upcoming',p,diff};
-    return null;
-  }).filter(Boolean).sort((a,b)=>a.diff-b.diff);
+  const alertas = [];
+  pac.forEach(p => {
+    // Faltou → urgente
+    if(p.statusPaciente==='faltou'){
+      alertas.push({tipo:'faltou', p, diff: p.proximaInjecao?daysDiff(p.proximaInjecao):0});
+      return;
+    }
+    // Ativos com próxima injeção
+    if(p.statusPaciente==='ativo' && p.proximaInjecao && isValidDate(p.proximaInjecao)){
+      const diff = daysDiff(p.proximaInjecao);
+      const aguard = p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
+      if(aguard)   { alertas.push({tipo:'confirmacao',p,diff}); return; }
+      if(diff<0)   { alertas.push({tipo:'atrasado',p,diff}); return; }
+      if(diff<=7)  { alertas.push({tipo:'upcoming',p,diff}); return; }
+      // ⚠️ Alerta 2 semanas antes: autorização pendente para convênio
+      if(diff<=14 && p.tipo==='convenio'){
+        const octOk = p.statusAuthOCT==='autorizado';
+        const injOk = p.statusAuthInj==='autorizado';
+        if(!octOk||!injOk) alertas.push({tipo:'auth-pendente',p,diff});
+      }
+    }
+    // Agendados — lembrar que está aguardando procedimento
+    if(p.statusPaciente==='agendado' && p.proximaInjecao && isValidDate(p.proximaInjecao)){
+      const diff = daysDiff(p.proximaInjecao);
+      if(diff<=7) alertas.push({tipo:'agendado-proximo',p,diff});
+    }
+    // Observação — alerta de autorização OCT pendente (14 dias)
+    if(p.statusPaciente==='observacao'){
+      const proxOCT = p.proximoOCTObservacao||p.proximoOCT||'';
+      if(proxOCT && isValidDate(proxOCT)){
+        const diff = daysDiff(proxOCT);
+        if(diff<0)  { alertas.push({tipo:'oct-atrasado',p,diff}); return; }
+        if(diff<=14 && p.tipo==='convenio' && p.statusAuthOCT!=='autorizado'){
+          alertas.push({tipo:'oct-auth-pendente',p,diff});
+        }
+        if(diff<=7) alertas.push({tipo:'oct-proximo',p,diff});
+      }
+    }
+  });
+  return alertas.sort((a,b)=>a.diff-b.diff);
 }
 
 function renderAlertasBanner(container,alertas){
   if(!alertas.length){container.innerHTML='';return;}
   container.innerHTML=alertas.map(a=>{
     const p=a.p;
+    if(a.tipo==='faltou') return `<div class="alert-banner alert-overdue"><div class="ab-icon">✗</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — faltou à consulta/injeção</div>
+      <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · Data: ${fmtDate(p.proximaInjecao)}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-success" onclick="confirmarAgendamento('${p.id}')">📅 Reagendar</button>
+        <button class="btn btn-sm btn-primary" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
     if(a.tipo==='atrasado') return `<div class="alert-banner alert-overdue"><div class="ab-icon">⚠️</div><div class="ab-body">
       <div class="ab-title">${p.nome} — injeção com ${Math.abs(a.diff)} dia(s) de atraso</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · Programada: ${fmtDate(p.proximaInjecao)}</div>
@@ -868,10 +914,44 @@ function renderAlertasBanner(container,alertas){
         <button class="btn btn-sm btn-danger" onclick="pacienteNaoFez('${p.id}')">🔄 Reagendar</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
+    if(a.tipo==='auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📋</div><div class="ab-body">
+      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — autorização pendente (injeção em ${a.diff} dias)</div>
+      <div>${p.diagnostico} · ${medBadge(p.medicacao)} · ${p.convenio||'Convênio'}</div>
+      <div style="font-size:11px;margin-top:2px">
+        OCT: ${p.statusAuthOCT==='autorizado'?'✓ OK':'⏳ Pendente'} &nbsp;|&nbsp;
+        Injeção: ${p.statusAuthInj==='autorizado'?'✓ OK':'⏳ Pendente'}
+      </div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado');setAuthInj('${p.id}','autorizado')">✓ Autorizar ambos</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
+    if(a.tipo==='oct-auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📷</div><div class="ab-body">
+      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — autorização OCT pendente (${a.diff} dias)</div>
+      <div>${p.diagnostico} · Em observação · ${p.convenio||'Convênio'}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓ Autorizar OCT</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
+    if(a.tipo==='oct-atrasado') return `<div class="alert-banner alert-overdue"><div class="ab-icon">📷</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — OCT atrasado ${Math.abs(a.diff)} dia(s)</div>
+      <div>${p.diagnostico} · Em observação</div>
+      <div class="ab-actions"><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
+      </div></div>`;
+    if(a.tipo==='agendado-proximo') return `<div class="alert-banner alert-upcoming"><div class="ab-icon">📅</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — agendado para ${fmtDate(p.proximaInjecao)} (em ${a.diff} dia(s))</div>
+      <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-primary" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>
+        <button class="btn btn-sm btn-danger" onclick="pacienteFaltou('${p.id}')">✗ Faltou</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
     return `<div class="alert-banner alert-upcoming"><div class="ab-icon">🔔</div><div class="ab-body">
       <div class="ab-title">${p.nome} — injeção em ${a.diff} dia(s) — ${fmtDate(p.proximaInjecao)}</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)}</div>
       <div class="ab-actions"><button class="btn btn-sm btn-info" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
+      </div></div>`;
+  }).join('');
+}
     </div></div>`;
   }).join('');
 }
@@ -1143,15 +1223,32 @@ function verDetalhe(id){
   let footer=`<button class="btn btn-outline btn-sm" onclick="closeModal('modal-det')">Fechar</button>`;
   footer+=`<button class="btn btn-warn btn-sm" onclick="abrirEditar('${p.id}')">✏️ Editar ficha</button>`;
   if(!isInat){
-    if(!isObs){
+    if(p.statusPaciente==='agendado'){
       footer+=`<button class="btn btn-primary btn-sm" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>`;
+      footer+=`<button class="btn btn-danger btn-sm" onclick="pacienteFaltou('${p.id}')">✗ Paciente faltou</button>`;
+    } else if(!isObs){
+      if(p.statusPaciente==='faltou'||getStatus(p)==='atrasado'){
+        footer+=`<button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${p.id}')">📅 Confirmar agendamento</button>`;
+        footer+=`<button class="btn btn-primary btn-sm" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>`;
+      } else if(getGrupo(p)==='agendar'){
+        footer+=`<button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${p.id}')">📅 Confirmar agendamento</button>`;
+        footer+=`<button class="btn btn-primary btn-sm" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>`;
+      } else {
+        footer+=`<button class="btn btn-primary btn-sm" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>`;
+      }
       footer+=`<button class="btn btn-teal btn-sm" onclick="abrirObservacao('${p.id}')">🔍 Sem injeção</button>`;
     } else {
       footer+=`<button class="btn btn-primary btn-sm" onclick="voltarTratamento('${p.id}')">💉 Retomar injeções</button>`;
     }
-    footer+=`<button class="btn btn-slate btn-sm" onclick="abrirInativar('${p.id}','perdido')">👤 Perda/Óbito</button>`;
+    if(['inativo','perdido'].includes(p.statusPaciente)){
+      footer+=`<button class="btn btn-success btn-sm" onclick="reativar('${p.id}')">↩ Reativar</button>`;
+      footer+=`<button class="btn btn-yellow btn-sm" onclick="resgatar('${p.id}')">🔄 Resgatar paciente</button>`;
+    } else {
+      footer+=`<button class="btn btn-slate btn-sm" onclick="abrirInativar('${p.id}','perdido')">👤 Perda/Óbito</button>`;
+    }
   } else {
     footer+=`<button class="btn btn-success btn-sm" onclick="reativar('${p.id}')">↩ Reativar</button>`;
+    footer+=`<button class="btn btn-yellow btn-sm" onclick="resgatar('${p.id}')">🔄 Resgatar paciente</button>`;
   }
   document.getElementById('det-footer').innerHTML=footer;
   openModal('modal-det');
@@ -1440,7 +1537,44 @@ function renderAlertasPage(){
   renderAlertasBanner(div,alertas);
 }
 
-// ── MODO GRUPOS ──
+// ── Confirmar agendamento
+async function confirmarAgendamento(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  p.statusPaciente='agendado';
+  atualizarCache(p); closeModal('modal-det'); renderAll();
+  await persistir(p,false);
+  showToast(`📅 ${p.nome} — agendamento confirmado`);
+}
+
+// ── Paciente faltou
+async function pacienteFaltou(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  if(!confirm(`Confirmar que ${p.nome} faltou à consulta/injeção?\nA data será mantida para reagendamento.`)) return;
+  p.statusPaciente='faltou';
+  p.obs = (p.obs?p.obs+' | ':'') + `Faltou em ${todayStr()}`;
+  atualizarCache(p); closeModal('modal-det'); renderAll();
+  await persistir(p,false);
+  showToast(`⚠️ ${p.nome} — marcado como faltou`);
+}
+
+// ── Resgatar paciente (perda de seguimento → urgente)
+async function resgatar(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  if(!confirm(`Resgatar ${p.nome}?\nEle será marcado como urgente para contato e reagendamento.`)) return;
+  p.statusPaciente='ativo';
+  p.inativoMotivo=''; p.inativoData=''; p.inativoObs='';
+  p.aguardandoConfirmacao=false;
+  // Limpar datas antigas para forçar atenção urgente
+  p.proximaInjecao=''; p.proximaConsulta=''; p.proximoOCT='';
+  p.obs = (p.obs?p.obs+' | ':'') + `Resgatado em ${todayStr()} — reagendar consulta`;
+  // Para convênio resetar autorizações
+  if(p.tipo==='convenio'){ p.statusAuthOCT='pendente'; p.statusAuthInj='pendente'; }
+  atualizarCache(p); closeModal('modal-det'); renderAll();
+  await persistir(p,false);
+  showToast(`🔄 ${p.nome} — resgatado com sucesso`);
+}
+
+
 let modoGrupos = true;
 
 function toggleModoGrupos(){
@@ -1455,28 +1589,31 @@ function getGrupo(p){
   // 1. Inativos sempre primeiro
   if(['inativo','perdido','obito'].includes(p.statusPaciente)) return 'inativos';
 
-  // 2. Observação
+  // 2. Faltou → urgente
+  if(p.statusPaciente === 'faltou') return 'urgente';
+
+  // 3. Observação
   if(p.statusPaciente === 'observacao') return 'obs';
+
+  // 4. Agendado
+  if(p.statusPaciente === 'agendado') return 'ok';
 
   const temInjecoes = p.injecoes && p.injecoes.length > 0;
   const temProxData = p.proximaInjecao && isValidDate(p.proximaInjecao);
 
-  // 3. Convênio: verificar autorização ANTES de qualquer outra coisa
-  //    (paciente pode ter proximaInjecao preenchida via edição manual, sem injeção registrada)
+  // 5. Convênio: verificar autorização ANTES de qualquer outra coisa
   if(p.tipo === 'convenio'){
-    // Se nunca fez nada e não tem dado → completar dados
     if(!temInjecoes && !temProxData) return 'semdata';
-    // Urgente tem prioridade máxima mesmo para convênio
     const statusC = getStatus(p);
-    if(statusC === 'atrasado' || statusC === 'confirmacao') return 'urgente';
-    // Checar autorizações
+    if(statusC === 'atrasado' || statusC === 'confirmacao' || statusC === 'faltou') return 'urgente';
     const octOk = p.statusAuthOCT === 'autorizado';
-    const injOk = p.statusAuthInj === 'autorizado';
+    const isObs = p.statusPaciente === 'observacao';
+    const injOk = isObs ? true : p.statusAuthInj === 'autorizado';
     if(!octOk || !injOk) return 'auth';
     return 'agendar';
   }
 
-  // 4. Particular: sem necessidade de autorização
+  // 6. Particular
   if(!temInjecoes && !temProxData) return 'semdata';
   const status = getStatus(p);
   if(status === 'atrasado' || status === 'confirmacao') return 'urgente';
@@ -1493,7 +1630,7 @@ const GRUPOS_DEF = [
   { key:'agendar', cls:'grupo-agendar', icon:'📅', title:'Prontos para Agendar',
     desc:'Autorizações OK (ou particular) — aguardando agendamento com o paciente', open:true },
   { key:'ok',      cls:'grupo-ok',      icon:'✅', title:'Agendados — Aguardando Procedimento',
-    desc:'Tudo agendado, injeção futura dentro do prazo', open:false },
+    desc:'Agendamento confirmado — aguardando dia da consulta/injeção', open:true },
   { key:'obs',     cls:'grupo-obs',     icon:'🔍', title:'Em Observação',
     desc:'Protocolo Observar e Estender — apenas OCT e consulta', open:false },
   { key:'semdata', cls:'grupo-semdata', icon:'⚙️', title:'Completar Dados',
@@ -1636,38 +1773,36 @@ function renderAgenda(){
 }
 
 function renderAutorizacoes(){
-  const pac=getPac().filter(p=>['ativo','observacao'].includes(p.statusPaciente)&&p.tipo==='convenio');
+  const pac=getPac().filter(p=>['ativo','observacao','agendado','faltou'].includes(p.statusPaciente)&&p.tipo==='convenio');
   const div=document.getElementById('table-auth');
   if(!pac.length){div.innerHTML='<div class="empty"><span class="ei">📋</span><p>Nenhum paciente convênio</p></div>';return;}
-  div.innerHTML=`<table>
-    <thead><tr>
-      <th>Paciente</th><th>Convênio</th><th>Medicação</th><th>Próx.Injeção</th><th>Status</th>
-      <th>📷 Auth. OCT</th><th>💉 Auth. Injeção</th><th>Ações</th>
-    </tr></thead>
-    <tbody>${pac.map(p=>`<tr>
-      <td><div style="font-weight:600">${p.nome}</div><div style="font-size:10px;color:var(--gray)">${p.diagnostico} · ${p.lateral}</div></td>
-      <td style="font-size:12px">${p.convenio||'—'}</td>
-      <td><span class="badge badge-navy" style="font-size:10px">${medBadge(p.medicacao)}</span></td>
-      <td style="font-size:12px">${fmtDate(p.proximaInjecao)||'—'}<br>${statusBadge(p)}</td>
-      <td>${statusBadge(p)}</td>
-      <td>
-        ${authOCTBadge(p)}<br>
-        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓</button>
-          <button class="btn btn-sm btn-danger"  onclick="setAuthOCT('${p.id}','negado')">✗</button>
-          <button class="btn btn-sm btn-outline" onclick="setAuthOCT('${p.id}','pendente')">⏳</button>
-        </div>
-      </td>
-      <td>
-        ${authInjBadge(p)}<br>
-        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓</button>
-          <button class="btn btn-sm btn-danger"  onclick="setAuthInj('${p.id}','negado')">✗</button>
-          <button class="btn btn-sm btn-outline" onclick="setAuthInj('${p.id}','pendente')">⏳</button>
-        </div>
-      </td>
-      <td><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button></td>
-    </tr>`).join('')}</tbody></table>`;
+  const rows = pac.map(p=>{
+    const isObs = p.statusPaciente==='observacao';
+    const proxData = isObs?(p.proximoOCTObservacao||p.proximoOCT||''):(p.proximaInjecao||'');
+    const authInjCell = isObs
+      ? '<span class="badge badge-gray" style="font-size:10px">N/A — Obs.</span>'
+      : (authInjBadge(p)+'<br><div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
+        +'<button class="btn btn-sm btn-success" onclick="setAuthInj(''+p.id+'','autorizado')">✓</button>'
+        +'<button class="btn btn-sm btn-danger" onclick="setAuthInj(''+p.id+'','negado')">✗</button>'
+        +'<button class="btn btn-sm btn-outline" onclick="setAuthInj(''+p.id+'','pendente')">⏳</button></div>');
+    return '<tr>'
+      +'<td><div style="font-weight:600">'+p.nome+'</div><div style="font-size:10px;color:var(--gray)">'+p.diagnostico+' · '+p.lateral+'</div></td>'
+      +'<td style="font-size:12px">'+(p.convenio||'—')+'</td>'
+      +'<td><span class="badge badge-navy" style="font-size:10px">'+(isObs?'Observação':medBadge(p.medicacao))+'</span></td>'
+      +'<td style="font-size:12px">'+(fmtDate(proxData)||'—')+'<br>'+statusBadge(p)+'</td>'
+      +'<td>'+statusBadge(p)+'</td>'
+      +'<td>'+authOCTBadge(p)+'<br><div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'
+        +'<button class="btn btn-sm btn-success" onclick="setAuthOCT(''+p.id+'','autorizado')">✓</button>'
+        +'<button class="btn btn-sm btn-danger" onclick="setAuthOCT(''+p.id+'','negado')">✗</button>'
+        +'<button class="btn btn-sm btn-outline" onclick="setAuthOCT(''+p.id+'','pendente')">⏳</button></div></td>'
+      +'<td>'+authInjCell+'</td>'
+      +'<td><button class="btn btn-sm btn-outline" onclick="verDetalhe(''+p.id+'')">Ver ficha</button></td>'
+      +'</tr>';
+  }).join('');
+  div.innerHTML='<table><thead><tr>'
+    +'<th>Paciente</th><th>Convênio</th><th>Medicação</th><th>Próx.Injeção/OCT</th><th>Status</th>'
+    +'<th>📷 Auth. OCT</th><th>💉 Auth. Injeção</th><th>Ações</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
 }
 
 async function setAuthOCT(id,status){
