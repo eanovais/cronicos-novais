@@ -729,7 +729,11 @@ async function recarregarDados() {
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function addDays(s,d){ const dt=new Date(s+'T12:00:00'); dt.setDate(dt.getDate()+d); return dt.toISOString().split('T')[0]; }
 function addWeeks(s,w){ return addDays(s,w*7); }
-function daysDiff(s){ const n=new Date(); n.setHours(0,0,0,0); return Math.round((new Date(s+'T12:00:00')-n)/86400000); }
+function daysDiff(s){
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = new Date(s+'T00:00:00'); alvo.setHours(0,0,0,0);
+  return Math.round((alvo - hoje) / 86400000);
+}
 function isValidDate(s){
   if(!s||s===''||s==='undefined'||s==='null') return false;
   const d = new Date(s+'T12:00:00');
