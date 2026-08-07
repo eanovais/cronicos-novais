@@ -582,6 +582,25 @@
           </div>
         </div>
         <div class="form-group full" id="inj-info"></div>
+        <div class="form-divider">Fracionamento</div>
+        <div class="form-group full" id="inj-fracionamento-box">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;text-transform:none;font-size:13px;font-weight:600;margin-bottom:8px">
+            <input type="checkbox" id="inj-frac-check" style="width:auto" onchange="toggleFracionamento()">
+            Registrar fracionamento de frasco
+          </label>
+          <div id="inj-frac-detalhes" style="display:none;background:#f8fafc;border-radius:8px;padding:12px;border:1px solid var(--gray-light)">
+            <div style="font-size:12px;color:var(--gray);margin-bottom:10px">
+              Selecione os pacientes que compartilharam este frasco nesta data.
+              <span id="inj-frac-capacidade" style="float:right;font-weight:700;color:var(--navy)"></span>
+            </div>
+            <div id="inj-frac-lista" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto"></div>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-light);font-size:12px">
+              Doses utilizadas: <strong id="inj-frac-usadas">0</strong> /
+              <strong id="inj-frac-total">0</strong>
+              <span id="inj-frac-aviso" style="color:var(--red);margin-left:8px;display:none">⚠️ Limite excedido</span>
+            </div>
+          </div>
+        </div>
         <div class="form-divider">Checklist</div>
         <div class="form-group full"><label>Observações</label><textarea id="inj-obs" rows="2" placeholder="Resposta ao tratamento, AV..."></textarea></div>
         <div class="form-group full"><label style="display:flex;align-items:center;gap:7px;cursor:pointer;text-transform:none;font-size:13px;font-weight:600"><input type="checkbox" id="inj-rel" style="width:auto"> Relatório gerado e autorização solicitada</label></div>
@@ -1332,6 +1351,9 @@ function abrirInjecao(id){
   document.getElementById('inj-obs').value='';
   document.getElementById('inj-rel').checked=false;
   document.getElementById('inj-oct').checked=false;
+  // Reset fracionamento
+  const fracCheck=document.getElementById('inj-frac-check');
+  if(fracCheck){ fracCheck.checked=false; document.getElementById('inj-frac-detalhes').style.display='none'; }
   document.getElementById('inj-troca-aviso').style.display='none';
   // Mostrar opção de consulta só para particulares
   const opcaoConsulta=document.getElementById('inj-consulta-opcao');
@@ -1395,6 +1417,10 @@ function atualizarInfoInj(){
     consultaStr=fmtFull(calcConsultaParticular(d.proxInj));
   }
   document.getElementById('inj-info').innerHTML='<div class="info-box" style="color:#166534"><strong>✓ '+cfg.nome+' ('+cfg.diaLabel+'s)</strong><br>💉 Próxima: <strong>'+fmtFull(d.proxInj)+'</strong><br>🩺 Consulta: <strong>'+consultaStr+'</strong></div>';
+  // Atualizar lista de fracionamento se estiver aberta
+  if(document.getElementById('inj-frac-check') && document.getElementById('inj-frac-check').checked){
+    carregarListaFracionamento();
+  }
 }
 
 document.getElementById('inj-data').addEventListener('change',atualizarInfoInj);
@@ -1419,7 +1445,8 @@ async function salvarInjecao(){
   const dosesAnt=getDosesFeitas(p);
   const totalCarreg=dosesCarreg(medUsada);
   const novasDoses=dosesAnt+1;
-  p.injecoes.push({id:genId(),data,olho:olhoAplicado,med:medUsada,intervalo:prox,obs:document.getElementById('inj-obs').value,relatorio:document.getElementById('inj-rel').checked,octSolicitado:document.getElementById('inj-oct').checked,doseCarregamento:novasDoses<=totalCarreg?novasDoses:null,trocaMedicacao:trocouMed?p.medicacao:null});
+  const fracData = getFracionamentoDados();
+  p.injecoes.push({id:genId(),data,olho:olhoAplicado,med:medUsada,intervalo:prox,obs:document.getElementById('inj-obs').value,relatorio:document.getElementById('inj-rel').checked,octSolicitado:document.getElementById('inj-oct').checked,fracionamento:fracData,doseCarregamento:novasDoses<=totalCarreg?novasDoses:null,trocaMedicacao:trocouMed?p.medicacao:null});
   p.ultimaInjecao=data; p.intervalo=prox; p.lateral=proxOlho;
   if(trocouMed) p.medicacao=medUsada;
   p.dosesCarregamentoFeitas=novasDoses;
@@ -1642,6 +1669,88 @@ async function salvarEditarDatas(){
   renderAll();
   await persistir(p,false);
   showToast(`📅 ${p.nome} — datas atualizadas`);
+}
+
+// ── Fracionamento de frasco
+const FRASCO_DOSES = {
+  'Eylia 2mg (Aflibercept)':    4,
+  'Eylia 8mg (Aflibercept HD)': 3,
+  'Vabysmo (Faricimabe)':       4,
+  'Avastin (Bevacizumab)':      1,
+  'Ozurdex (Dexametasona)':     1,
+};
+
+function toggleFracionamento(){
+  const checked = document.getElementById('inj-frac-check').checked;
+  document.getElementById('inj-frac-detalhes').style.display = checked ? '' : 'none';
+  if(checked) carregarListaFracionamento();
+}
+
+function carregarListaFracionamento(){
+  const p = getPac().find(x=>x.id===currentId); if(!p) return;
+  const dataInj = document.getElementById('inj-data').value;
+  const med = document.getElementById('inj-med').value;
+  const maxDoses = FRASCO_DOSES[med] || 1;
+  document.getElementById('inj-frac-total').textContent = maxDoses;
+  document.getElementById('inj-frac-capacidade').textContent = 'Frasco: '+maxDoses+' dose(s) — '+med.split(' ')[0];
+  if(maxDoses === 1){
+    document.getElementById('inj-frac-lista').innerHTML =
+      '<div style="font-size:12px;color:var(--gray);font-style:italic">Este medicamento vem em dose individual (sem fracionamento).</div>';
+    document.getElementById('inj-frac-usadas').textContent = '1';
+    return;
+  }
+  // Pacientes com injeção programada para a mesma data
+  const todos = getPac().filter(x =>
+    x.id !== currentId &&
+    x.proximaInjecao === dataInj &&
+    ['ativo','agendado'].includes(x.statusPaciente)
+  );
+  const lista = document.getElementById('inj-frac-lista');
+  lista.innerHTML = '';
+  const dosesBase = p.lateral==='AO' ? 2 : 1;
+  lista.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f0fdf4;border-radius:6px;font-size:12px">'
+    +'<span style="color:var(--green)">✓</span><span style="flex:1;font-weight:600">'+p.nome+' (paciente atual)</span>'
+    +'<span style="font-size:11px;color:var(--gray)">'+p.lateral+' ('+dosesBase+' dose'+(dosesBase>1?'s':'')+')</span></div>';
+  if(todos.length === 0){
+    lista.innerHTML += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:6px 0">Nenhum outro paciente programado para esta data.</div>';
+  } else {
+    todos.forEach(pac=>{
+      const doses = pac.lateral==='AO' ? 2 : 1;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;font-size:12px;border:1px solid var(--gray-light)';
+      row.innerHTML = '<input type="checkbox" class="frac-pac-check" data-doses="'+doses+'" data-id="'+pac.id+'" style="width:auto" onchange="atualizarContadorFrac()">'
+        +'<span style="flex:1">'+pac.nome+'</span>'
+        +'<span style="font-size:11px;color:var(--gray)">'+pac.lateral+' ('+doses+' dose'+(doses>1?'s':'')+')</span>';
+      lista.appendChild(row);
+    });
+  }
+  atualizarContadorFrac();
+}
+
+function atualizarContadorFrac(){
+  const p = getPac().find(x=>x.id===currentId); if(!p) return;
+  const med = document.getElementById('inj-med').value;
+  const maxDoses = FRASCO_DOSES[med] || 1;
+  const dosesBase = p.lateral==='AO' ? 2 : 1;
+  let dosesExtras = 0;
+  document.querySelectorAll('.frac-pac-check:checked').forEach(c=>{ dosesExtras += parseInt(c.dataset.doses)||1; });
+  const total = dosesBase + dosesExtras;
+  document.getElementById('inj-frac-usadas').textContent = total;
+  document.getElementById('inj-frac-aviso').style.display = total > maxDoses ? '' : 'none';
+}
+
+function getFracionamentoDados(){
+  if(!document.getElementById('inj-frac-check') || !document.getElementById('inj-frac-check').checked) return null;
+  const p = getPac().find(x=>x.id===currentId); if(!p) return null;
+  const med = document.getElementById('inj-med').value;
+  const maxDoses = FRASCO_DOSES[med] || 1;
+  const dosesBase = p.lateral==='AO' ? 2 : 1;
+  const pacientesFracionados = [{id:p.id, nome:p.nome, lateral:p.lateral, doses:dosesBase}];
+  document.querySelectorAll('.frac-pac-check:checked').forEach(c=>{
+    const pac = getPac().find(x=>x.id===c.dataset.id);
+    if(pac) pacientesFracionados.push({id:pac.id, nome:pac.nome, lateral:pac.lateral, doses:parseInt(c.dataset.doses)||1});
+  });
+  return { medicacao:med, maxDoses, dosesUsadas:pacientesFracionados.reduce((s,x)=>s+x.doses,0), pacientes:pacientesFracionados };
 }
 
 // ── Confirmar agendamento
@@ -2078,6 +2187,11 @@ function renderBI(){
   const sel = document.getElementById('bi-filtro-mes');
   const selVal = sel ? sel.value : '';
   if(sel) sel.innerHTML = '<option value="">Todos os meses</option>' + todosMesesAll.map(m=>`<option value="${m}" ${m===selVal?'selected':''}>${mesAnoLabel(m)}</option>`).join('');
+  // Ajuste 1: default para mês atual se nenhum selecionado
+  const mesAtual = new Date().toISOString().slice(0,7); // YYYY-MM
+  if(sel && !sel.value && todosMesesAll.includes(mesAtual)){
+    sel.value = mesAtual;
+  }
   const mesFiltro = sel ? sel.value : '';
   const injFiltradas = mesFiltro ? injFeitas.filter(i=>mesAno(i.data)===mesFiltro) : injFeitas;
   const fatFiltrado = injFiltradas.reduce((s,i)=>s+faturamentoInjecao(i),0);
@@ -2116,16 +2230,101 @@ function renderBI(){
   const proxMesInj = mesFiltro ? projFiltrada.inj : (projPorMes[proxMesProj]?.inj||0);
   document.getElementById('bi-content').innerHTML = '<div class="bi-section-title">\u{1F4B0} Financeiro</div>'
   + '<div class="bi-grid">'
-  + '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Faturamento Realizado '+labelFiltro+'</div><div class="bk-value" style="color:var(--green)">'+fmtBRL(fatFiltrado)+'</div><div class="bk-sub">'+injFiltradas.length+' injeções · '+totalOlhosFiltrado+' olhos</div></div>'
+  + '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Faturamento Realizado '+labelFiltro+'</div><div class="bk-value" style="color:var(--green)">'+fmtBRL(fatFiltrado)+'</div><div class="bk-sub">'+injFiltradas.length+' pacientes · '+totalOlhosFiltrado+' olhos</div></div>'
   + '<div class="bi-kpi" style="border-color:var(--blue)"><div class="bk-label">'+proxMesLabel+'</div><div class="bk-value" style="color:var(--blue)">'+fmtBRL(proxMesFat)+'</div><div class="bk-sub">'+proxMesInj+' injeções agendadas</div></div>'
   + '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Projeção Anual</div><div class="bk-value" style="color:var(--gold)">'+fmtBRL(projecaoAnual)+'</div><div class="bk-sub">baseado na média mensal</div></div>'
   + '<div class="bi-kpi" style="border-color:var(--navy)"><div class="bk-label">Ticket Médio / Injeção</div><div class="bk-value">'+fmtBRL(injFiltradas.length>0?fatFiltrado/injFiltradas.length:0)+'</div><div class="bk-sub">R$ '+VALOR_INJECAO+'/olho (convênio)</div></div>'
   + '</div>'
-  + '<div class="bi-card" style="margin-bottom:16px"><h4>\u{1F4C5} Evolução Mensal</h4>'
-  + (ultimos6.length===0 ? '<div class="empty"><p>Sem dados ainda</p></div>' : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray)">Mês</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Injeções</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--green)">Realizado</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--blue)">Projetado</th><th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Total</th></tr></thead><tbody>'
-  + ultimos6.map(m=>{ const r=fatPorMes[m]||{fat:0,inj:0}; const pj=projPorMes[m]||{fat:0,inj:0}; return '<tr style="border-top:1px solid var(--gray-light)"><td style="padding:8px 10px;font-weight:600">'+mesAnoLabel(m)+'</td><td style="padding:8px 10px;text-align:right;color:var(--gray);font-size:12px">'+(r.inj+pj.inj)+'</td><td style="padding:8px 10px;text-align:right;color:var(--green);font-weight:700">'+(r.fat>0?fmtBRL(r.fat):'—')+'</td><td style="padding:8px 10px;text-align:right;color:var(--blue);font-weight:700">'+(pj.fat>0?fmtBRL(pj.fat):'—')+'</td><td style="padding:8px 10px;text-align:right;font-weight:700">'+fmtBRL(r.fat+pj.fat)+'</td></tr>'; }).join('')
-  + '</tbody></table></div>')
-  + '</div>'
+  + (()=>{
+    if(ultimos6.length===0) return '<div class="bi-card" style="margin-bottom:16px"><h4>\u{1F4C5} Evolução Mensal</h4><div class="empty"><p>Sem dados ainda</p></div></div>';
+
+    // Construir mapa de pacientes realizados por mês (ajuste 2)
+    const pacPorMes = {};
+    injFeitas.forEach(inj=>{
+      const m = mesAno(inj.data); if(!m) return;
+      if(!pacPorMes[m]) pacPorMes[m]=[];
+      pacPorMes[m].push(inj);
+    });
+
+    // Mapa de pacientes programados por mês (ajuste 4)
+    const progPorMes = {};
+    ativos.forEach(p=>{
+      if(!p.proximaInjecao||!isValidDate(p.proximaInjecao)) return;
+      const m = mesAno(p.proximaInjecao); if(!m) return;
+      if(!progPorMes[m]) progPorMes[m]=[];
+      progPorMes[m].push(p);
+    });
+
+    let html2 = '<div class="bi-card" style="margin-bottom:16px"><h4>\u{1F4C5} Evolução Mensal — Realizado e Programado</h4>';
+    html2 += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+    html2 += '<thead><tr>';
+    html2 += '<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray)">Mês</th>';
+    html2 += '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Pacientes</th>';
+    html2 += '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--green)">Realizado</th>';
+    html2 += '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--blue)">Projetado</th>';
+    html2 += '<th style="text-align:right;padding:6px 10px;font-size:10px;color:var(--gray)">Total</th>';
+    html2 += '</tr></thead><tbody>';
+
+    ultimos6.forEach(m=>{
+      const r=fatPorMes[m]||{fat:0,inj:0};
+      const pj=projPorMes[m]||{fat:0,inj:0};
+      const realPacs = pacPorMes[m]||[];
+      const progPacs = progPorMes[m]||[];
+      const totalPacs = r.inj+pj.inj;
+
+      // Linha resumo do mês
+      html2 += '<tr style="border-top:2px solid var(--gray-light);background:#f8fafc">';
+      html2 += '<td style="padding:8px 10px;font-weight:700;font-size:13px">'+mesAnoLabel(m)+'</td>';
+      html2 += '<td style="padding:8px 10px;text-align:right;color:var(--gray);font-size:12px">'+totalPacs+'</td>';
+      html2 += '<td style="padding:8px 10px;text-align:right;color:var(--green);font-weight:700">'+(r.fat>0?fmtBRL(r.fat):'—')+'</td>';
+      html2 += '<td style="padding:8px 10px;text-align:right;color:var(--blue);font-weight:700">'+(pj.fat>0?fmtBRL(pj.fat):'—')+'</td>';
+      html2 += '<td style="padding:8px 10px;text-align:right;font-weight:700">'+fmtBRL(r.fat+pj.fat)+'</td>';
+      html2 += '</tr>';
+
+      // Ajuste 2: pacientes que realizaram injeção no mês
+      if(realPacs.length>0){
+        html2 += '<tr><td colspan="5" style="padding:2px 10px 2px 20px">';
+        html2 += '<div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 2px">✓ Realizados</div>';
+        realPacs.forEach(inj=>{
+          const np = inj.paciente;
+          const val = faturamentoInjecao(inj);
+          const olhoLabel = olhosInjetados(inj)===2 ? 'AO' : inj.olho;
+          const proxInj = np.proximaInjecao && isValidDate(np.proximaInjecao) ? fmtDate(np.proximaInjecao) : '—';
+          html2 += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9;font-size:12px">';
+          html2 += '<span>'+np.nome+'</span>';
+          html2 += '<span style="display:flex;gap:12px;color:var(--gray)">';
+          html2 += '<span style="font-size:11px;background:#f0fdf4;border-radius:4px;padding:1px 6px;color:var(--green)">'+olhoLabel+'</span>';
+          html2 += '<span style="color:var(--navy);font-weight:600">'+fmtBRL(val)+'</span>';
+          html2 += '<span style="font-size:11px;color:var(--blue)" title="Próxima injeção">→ '+proxInj+'</span>';
+          html2 += '</span></div>';
+        });
+        html2 += '</td></tr>';
+      }
+
+      // Ajuste 4: pacientes programados para o mês
+      if(progPacs.length>0){
+        html2 += '<tr><td colspan="5" style="padding:2px 10px 2px 20px">';
+        html2 += '<div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 2px">📅 Programados</div>';
+        const progOrdenados = [...progPacs].sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
+        progOrdenados.forEach(p=>{
+          const val = faturamentoProjetado(p);
+          const olhos = p.lateral==='AO'?2:1;
+          const olhoLabel = p.lateral;
+          html2 += '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9;font-size:12px">';
+          html2 += '<span>'+p.nome+'</span>';
+          html2 += '<span style="display:flex;gap:12px;color:var(--gray)">';
+          html2 += '<span style="font-size:11px;background:#eff6ff;border-radius:4px;padding:1px 6px;color:var(--blue)">'+olhoLabel+'</span>';
+          html2 += '<span style="color:var(--navy);font-weight:600">'+fmtBRL(val)+'</span>';
+          html2 += '<span style="font-size:11px;color:var(--blue)">'+fmtDate(p.proximaInjecao)+'</span>';
+          html2 += '</span></div>';
+        });
+        html2 += '</td></tr>';
+      }
+    });
+
+    html2 += '</tbody></table></div></div>';
+    return html2;
+  })()
   + '<div class="bi-section-title">\u{1F3E5} Clínico</div>'
   + '<div class="bi-grid">'
   + '<div class="bi-kpi" style="border-color:var(--navy)"><div class="bk-label">Pacientes Ativos</div><div class="bk-value">'+ativos.length+'</div><div class="bk-sub">+ '+pac.filter(p=>p.statusPaciente==='observacao').length+' em observação</div></div>'
