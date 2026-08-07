@@ -462,6 +462,26 @@
   </div>
 </div>
 
+<!-- ══ MODAL EDITAR DATAS ══ -->
+<div class="modal-overlay hidden" id="modal-datas">
+  <div class="modal" style="width:420px">
+    <div class="modal-header"><h2>📅 Ajustar Datas</h2><button class="close-btn" onclick="closeModal('modal-datas')">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gray);margin-bottom:14px">Ajuste as datas programadas do paciente. Use apenas em casos esporádicos quando o paciente solicitar alteração.</p>
+      <div class="form-grid">
+        <div class="form-group"><label>💉 Próxima Injeção</label><input type="date" id="dt-injecao"></div>
+        <div class="form-group"><label>🩺 Próxima Consulta</label><input type="date" id="dt-consulta"></div>
+        <div class="form-group"><label>📷 Próximo OCT</label><input type="date" id="dt-oct"></div>
+        <div class="form-group" id="dt-obs-row" style="display:none"><label>📷 Próximo OCT (Observação)</label><input type="date" id="dt-oct-obs"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-datas')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEditarDatas()">Salvar Datas</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL NOVO PACIENTE ══ -->
 <div class="modal-overlay" id="modal-novo">
   <div class="modal">
@@ -548,6 +568,19 @@
         <div class="form-group full" id="inj-carregamento-aviso" style="display:none"></div>
         <div class="form-group"><label>Próximo intervalo</label><select id="inj-prox" onchange="atualizarInfoInj()"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
         <div class="form-group"><label>Olho(s) próxima injeção</label><select id="inj-prox-olho"><option value="OD">OD</option><option value="OE">OE</option><option value="AO">AO</option></select></div>
+        <div class="form-group full" id="inj-consulta-opcao" style="display:none">
+          <label>Data da consulta (paciente particular)</label>
+          <div style="display:flex;gap:10px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:normal;text-transform:none;cursor:pointer;flex:1;padding:8px 12px;border:1.5px solid var(--gray-light);border-radius:8px">
+              <input type="radio" name="inj-consulta-radio" id="inj-consulta-anterior" value="anterior" checked onchange="atualizarInfoInj()">
+              <span><strong>Quarta anterior</strong><br><span style="font-size:11px;color:var(--gray)">Semana antes da injeção</span></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:normal;text-transform:none;cursor:pointer;flex:1;padding:8px 12px;border:1.5px solid var(--gray-light);border-radius:8px">
+              <input type="radio" name="inj-consulta-radio" id="inj-consulta-seguinte" value="seguinte" onchange="atualizarInfoInj()">
+              <span><strong>Quarta seguinte</strong><br><span style="font-size:11px;color:var(--gray)">Dia seguinte à injeção (terça)</span></span>
+            </label>
+          </div>
+        </div>
         <div class="form-group full" id="inj-info"></div>
         <div class="form-divider">Checklist</div>
         <div class="form-group full"><label>Observações</label><textarea id="inj-obs" rows="2" placeholder="Resposta ao tratamento, AV..."></textarea></div>
@@ -864,11 +897,14 @@ function getAlertas(pac){
       if(aguard)   { alertas.push({tipo:'confirmacao',p,diff}); return; }
       if(diff<0)   { alertas.push({tipo:'atrasado',p,diff}); return; }
       if(diff<=7)  { alertas.push({tipo:'upcoming',p,diff}); return; }
-      // ⚠️ Alerta 2 semanas antes: autorização pendente para convênio
+      // ⚠️ Alerta autorização pendente (só injeção necessária)
       if(diff<=14 && p.tipo==='convenio'){
-        const octOk = p.statusAuthOCT==='autorizado';
         const injOk = p.statusAuthInj==='autorizado';
-        if(!octOk||!injOk) alertas.push({tipo:'auth-pendente',p,diff});
+        if(!injOk){
+          // ≤7 dias → urgente vermelho; ≤14 dias → amarelo
+          const tipoAlerta = diff<=7 ? 'auth-urgente' : 'auth-pendente';
+          alertas.push({tipo:tipoAlerta, p, diff});
+        }
       }
     }
     // Agendados — lembrar que está aguardando procedimento
@@ -918,15 +954,20 @@ function renderAlertasBanner(container,alertas){
         <button class="btn btn-sm btn-danger" onclick="pacienteNaoFez('${p.id}')">🔄 Reagendar</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
+    if(a.tipo==='auth-urgente') return `<div class="alert-banner alert-overdue"><div class="ab-icon">🚨</div><div class="ab-body">
+      <div class="ab-title">🚨 ${p.nome} — AUTORIZAÇÃO URGENTE (injeção em ${a.diff} dia(s))</div>
+      <div>${p.diagnostico} · ${medBadge(p.medicacao)} · ${p.convenio||'Convênio'}</div>
+      <div style="font-size:11px;margin-top:2px">Injeção: ⏳ Pendente — ligar para o convênio HOJE</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
     if(a.tipo==='auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📋</div><div class="ab-body">
       <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — autorização pendente (injeção em ${a.diff} dias)</div>
       <div>${p.diagnostico} · ${medBadge(p.medicacao)} · ${p.convenio||'Convênio'}</div>
-      <div style="font-size:11px;margin-top:2px">
-        OCT: ${p.statusAuthOCT==='autorizado'?'✓ OK':'⏳ Pendente'} &nbsp;|&nbsp;
-        Injeção: ${p.statusAuthInj==='autorizado'?'✓ OK':'⏳ Pendente'}
-      </div>
+      <div style="font-size:11px;margin-top:2px">Injeção: ⏳ Pendente — solicitar ao convênio</div>
       <div class="ab-actions">
-        <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado');setAuthInj('${p.id}','autorizado')">✓ Autorizar ambos</button>
+        <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
     if(a.tipo==='oct-auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📷</div><div class="ab-body">
@@ -1221,7 +1262,11 @@ function verDetalhe(id){
       </div>
     </div>`:''}`;
 
+  // Botão editar datas (antes do fechar)
   let footer=`<button class="btn btn-outline btn-sm" onclick="closeModal('modal-det')">Fechar</button>`;
+  if(!isInat && p.proximaInjecao && isValidDate(p.proximaInjecao)){
+    footer+=`<button class="btn btn-outline btn-sm" onclick="abrirEditarDatas('${p.id}')" style="border-color:var(--blue);color:var(--blue)">📅 Ajustar datas</button>`;
+  }
   footer+=`<button class="btn btn-warn btn-sm" onclick="abrirEditar('${p.id}')">✏️ Editar ficha</button>`;
   if(!isInat){
     if(p.statusPaciente==='agendado'){
@@ -1288,6 +1333,13 @@ function abrirInjecao(id){
   document.getElementById('inj-rel').checked=false;
   document.getElementById('inj-oct').checked=false;
   document.getElementById('inj-troca-aviso').style.display='none';
+  // Mostrar opção de consulta só para particulares
+  const opcaoConsulta=document.getElementById('inj-consulta-opcao');
+  if(opcaoConsulta){
+    opcaoConsulta.style.display=p.tipo==='particular'?'':'none';
+    const radioAnt=document.getElementById('inj-consulta-anterior');
+    if(radioAnt) radioAnt.checked=true;
+  }
   const emCarg=emCarregamento(p);
   const dosesFeitas=getDosesFeitas(p);
   const totalCarreg=dosesCarreg(p.medicacao);
@@ -1295,7 +1347,7 @@ function abrirInjecao(id){
     document.getElementById('inj-prox').value='4';
     document.getElementById('inj-prox').disabled=true;
     document.getElementById('inj-carregamento-aviso').style.display='';
-    document.getElementById('inj-carregamento-aviso').innerHTML=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 12px;font-size:12px;color:#92400e">⏳ <strong>Dose de carregamento ${dosesFeitas+1}/${totalCarreg}</strong> — intervalo fixo em 4 semanas.${dosesFeitas+1===totalCarreg?' <strong>Esta é a última dose de carregamento.</strong>':''}</div>`;
+    document.getElementById('inj-carregamento-aviso').innerHTML='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:9px 12px;font-size:12px;color:#92400e">⏳ <strong>Dose de carregamento '+(dosesFeitas+1)+'/'+totalCarreg+'</strong> — intervalo fixo em 4 semanas.'+(dosesFeitas+1===totalCarreg?' <strong>Esta é a última dose de carregamento.</strong>':'')+'</div>';
   } else {
     document.getElementById('inj-prox').value=String(p.intervalo||4);
     document.getElementById('inj-prox').disabled=false;
@@ -1306,8 +1358,8 @@ function abrirInjecao(id){
     banner.style.display='';
     const feitas=getDosesFeitas(p); const total=dosesCarreg(p.medicacao);
     banner.innerHTML=feitas>=total
-      ?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 12px;font-size:12px;color:#166534">✅ <strong>Carregamento completo (${total}/${total}).</strong> Paciente em manutenção.</div>`
-      :`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:9px 12px;font-size:12px;color:#1e40af">💉 <strong>Dose ${feitas+1} de ${total}</strong> — ${medBadge(p.medicacao)}</div>`;
+      ?'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px 12px;font-size:12px;color:#166534">✅ <strong>Carregamento completo ('+total+'/'+total+').</strong> Paciente em manutenção.</div>'
+      :'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:9px 12px;font-size:12px;color:#1e40af">💉 <strong>Dose '+(feitas+1)+' de '+total+'</strong> — '+medBadge(p.medicacao)+'</div>';
   } else { banner.style.display='none'; }
   atualizarInfoInj();
   closeModal('modal-det'); openModal('modal-inj');
@@ -1318,16 +1370,35 @@ function onMedChange(){
   document.getElementById('inj-troca-aviso').style.display=document.getElementById('inj-med').value!==p.medicacao?'':'none';
 }
 
+function calcConsultaParticular(proxInj){
+  const radio=document.querySelector('input[name="inj-consulta-radio"]:checked');
+  const opcao=radio?radio.value:'anterior';
+  const d=new Date(proxInj+'T12:00:00');
+  if(opcao==='seguinte'){
+    const seg=new Date(d); seg.setDate(seg.getDate()+1);
+    return seg.toISOString().split('T')[0];
+  } else {
+    const ant=new Date(d); ant.setDate(ant.getDate()-6);
+    return ant.toISOString().split('T')[0];
+  }
+}
+
 function atualizarInfoInj(){
   const data=document.getElementById('inj-data').value;
   const prox=parseInt(document.getElementById('inj-prox').value)||4;
   if(!data) return;
+  const p=getPac().find(x=>x.id===currentId);
   const d=calcDatas(data,prox,unidadeAtual);
   const cfg=UNIDADES[unidadeAtual];
-  document.getElementById('inj-info').innerHTML=`<div class="info-box" style="color:#166534"><strong>✓ ${cfg.nome} (${cfg.diaLabel}s)</strong><br>💉 Próxima: <strong>${fmtFull(d.proxInj)}</strong><br>🩺 Consulta: <strong>${fmtFull(d.proxConsulta)}</strong></div>`;
+  let consultaStr=fmtFull(d.proxConsulta);
+  if(p&&p.tipo==='particular'){
+    consultaStr=fmtFull(calcConsultaParticular(d.proxInj));
+  }
+  document.getElementById('inj-info').innerHTML='<div class="info-box" style="color:#166534"><strong>✓ '+cfg.nome+' ('+cfg.diaLabel+'s)</strong><br>💉 Próxima: <strong>'+fmtFull(d.proxInj)+'</strong><br>🩺 Consulta: <strong>'+consultaStr+'</strong></div>';
 }
 
 document.getElementById('inj-data').addEventListener('change',atualizarInfoInj);
+document.getElementById('inj-prox').addEventListener('change',atualizarInfoInj);
 document.getElementById('inj-prox').addEventListener('change',atualizarInfoInj);
 
 async function salvarInjecao(){
@@ -1341,6 +1412,10 @@ async function salvarInjecao(){
   const emCarg=emCarregamento(p);
   const prox=emCarg?4:parseInt(document.getElementById('inj-prox').value);
   const novas=calcDatas(data,prox,unidadeAtual);
+  // Para particulares, usar opção de consulta selecionada
+  if(p.tipo==='particular'){
+    novas.proxConsulta=calcConsultaParticular(novas.proxInj);
+  }
   const dosesAnt=getDosesFeitas(p);
   const totalCarreg=dosesCarreg(medUsada);
   const novasDoses=dosesAnt+1;
@@ -1538,6 +1613,37 @@ function renderAlertasPage(){
   renderAlertasBanner(div,alertas);
 }
 
+// ── Editar datas do paciente
+function abrirEditarDatas(id){
+  const p=getPac().find(x=>x.id===id); if(!p) return;
+  currentId=id;
+  document.getElementById('dt-injecao').value=p.proximaInjecao||'';
+  document.getElementById('dt-consulta').value=p.proximaConsulta||'';
+  document.getElementById('dt-oct').value=p.proximoOCT||'';
+  const isObs=p.statusPaciente==='observacao';
+  document.getElementById('dt-obs-row').style.display=isObs?'':'none';
+  document.getElementById('dt-oct-obs').value=p.proximoOCTObservacao||'';
+  closeModal('modal-det');
+  openModal('modal-datas');
+}
+
+async function salvarEditarDatas(){
+  const p=getPac().find(x=>x.id===currentId); if(!p) return;
+  const dtInj=document.getElementById('dt-injecao').value;
+  const dtCon=document.getElementById('dt-consulta').value;
+  const dtOCT=document.getElementById('dt-oct').value;
+  const dtOCTObs=document.getElementById('dt-oct-obs').value;
+  if(dtInj) p.proximaInjecao=dtInj;
+  if(dtCon) p.proximaConsulta=dtCon;
+  if(dtOCT) p.proximoOCT=dtOCT;
+  if(dtOCTObs) p.proximoOCTObservacao=dtOCTObs;
+  atualizarCache(p);
+  closeModal('modal-datas');
+  renderAll();
+  await persistir(p,false);
+  showToast(`📅 ${p.nome} — datas atualizadas`);
+}
+
 // ── Confirmar agendamento
 async function confirmarAgendamento(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
@@ -1607,10 +1713,11 @@ function getGrupo(p){
     if(!temInjecoes && !temProxData) return 'semdata';
     const statusC = getStatus(p);
     if(statusC === 'atrasado' || statusC === 'confirmacao' || statusC === 'faltou') return 'urgente';
-    const octOk = p.statusAuthOCT === 'autorizado';
     const isObs = p.statusPaciente === 'observacao';
     const injOk = isObs ? true : p.statusAuthInj === 'autorizado';
-    if(!octOk || !injOk) return 'auth';
+    // Apenas autorização da injeção é necessária para agendar
+    // OCT pode estar pendente sem bloquear o agendamento
+    if(!injOk) return 'auth';
     return 'agendar';
   }
 
@@ -1857,7 +1964,7 @@ async function setAuthInj(id,status){
 
 function updateNavBadges(pac){
   const alertas=getAlertas(pac.filter(p=>p.statusPaciente==='ativo'));
-  const authPend=pac.filter(p=>['ativo','observacao'].includes(p.statusPaciente)&&p.tipo==='convenio'&&(p.statusAuthOCT!=='autorizado'||p.statusAuthInj!=='autorizado')).length;
+  const authPend=pac.filter(p=>['ativo','observacao','agendado','faltou'].includes(p.statusPaciente)&&p.tipo==='convenio'&&p.statusAuthInj!=='autorizado').length;
   const setB=(id,c)=>{const el=document.getElementById(id);el.textContent=c;el.style.display=c>0?'inline-block':'none';};
   setB('nb-dashboard',alertas.length);setB('nb-alertas',alertas.length);setB('nb-auth',authPend);
 }
