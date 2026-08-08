@@ -2469,10 +2469,11 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
   // Métricas por medicação
   const metricas = {};
   lista.forEach(s=>{
-    if(!metricas[s.medicacao]) metricas[s.medicacao] = {sessoes:0, dosesMax:0, dosesUsadas:0};
+    if(!metricas[s.medicacao]) metricas[s.medicacao] = {sessoes:0, dosesMax:0, dosesUsadas:0, pacientes:0};
     metricas[s.medicacao].sessoes++;
-    metricas[s.medicacao].dosesMax += s.maxDoses;
+    metricas[s.medicacao].dosesMax    += s.maxDoses;
     metricas[s.medicacao].dosesUsadas += s.dosesUsadas;
+    metricas[s.medicacao].pacientes   += (s.pacientes||[]).length;
   });
 
   if(lista.length === 0){
@@ -2484,7 +2485,10 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
   const totalSessoes = lista.length;
   const totalDosesMax = Object.values(metricas).reduce((s,m)=>s+m.dosesMax,0);
   const totalDosesUsadas = Object.values(metricas).reduce((s,m)=>s+m.dosesUsadas,0);
+  const totalPacientes = Object.values(metricas).reduce((s,m)=>s+m.pacientes,0);
   const aproveitamentoGeral = totalDosesMax > 0 ? Math.round((totalDosesUsadas/totalDosesMax)*100) : 0;
+  const pacPorFrasco   = totalSessoes > 0 ? Math.round((totalPacientes/totalSessoes)*10)/10 : 0;
+  const dosesPorFrasco = totalSessoes > 0 ? Math.round((totalDosesUsadas/totalSessoes)*10)/10 : 0;
 
   let html2 = '<div class="bi-section-title">🧪 Farmacoeconomia — Fracionamento de Frascos</div>';
 
@@ -2493,7 +2497,7 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
   html2 += '<div class="bi-kpi" style="border-color:#7c3aed"><div class="bk-label">Sessões Registradas</div><div class="bk-value" style="color:#7c3aed">'+totalSessoes+'</div><div class="bk-sub">frascos compartilhados</div></div>';
   html2 += '<div class="bi-kpi" style="border-color:#0891b2"><div class="bk-label">Total Doses Utilizadas</div><div class="bk-value" style="color:#0891b2">'+totalDosesUsadas+'/'+totalDosesMax+'</div><div class="bk-sub">doses usadas / capacidade total</div></div>';
   html2 += '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Aproveitamento Geral</div><div class="bk-value" style="color:'+(aproveitamentoGeral>=80?'var(--green)':aproveitamentoGeral>=60?'var(--gold)':'var(--red)')+'">'+aproveitamentoGeral+'%</div><div class="bk-sub">eficiência dos frascos</div></div>';
-  html2 += '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Pacientes / Sessão</div><div class="bk-value" style="color:var(--gold)">'+(totalSessoes>0?Math.round(totalDosesUsadas/totalSessoes*10)/10:0)+'</div><div class="bk-sub">média de doses por frasco</div></div>';
+  html2 += '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Pacientes / Frasco</div><div class="bk-value" style="color:var(--gold)">'+pacPorFrasco+'</div><div class="bk-sub">'+totalPacientes+' pacientes · '+dosesPorFrasco+' doses/frasco</div></div>';
   html2 += '</div>';
 
   // Aproveitamento por medicação
@@ -2505,15 +2509,28 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
     const pct = m.dosesMax > 0 ? Math.round((m.dosesUsadas/m.dosesMax)*100) : 0;
     const cor = pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
     const nome = med.includes('8mg')?'Eylia 8mg':med.includes('Eylia')?'Eylia 2mg':med.includes('Vabysmo')?'Vabysmo':med.includes('Avastin')?'Avastin':'Ozurdex';
-    html2 += '<div class="bi-bar-row">'
-      +'<div class="bi-bar-label" style="width:90px">'+nome+'</div>'
-      +'<div class="bi-bar-track"><div class="bi-bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>'
-      +'<div style="font-size:11px;font-weight:700;color:'+cor+';width:45px;text-align:right">'+pct+'%</div>'
-      +'<div style="font-size:10px;color:var(--gray);width:55px;text-align:right">'+m.dosesUsadas+'/'+m.dosesMax+' doses</div>'
+    const pacFrasco   = m.sessoes>0 ? Math.round((m.pacientes/m.sessoes)*10)/10 : 0;
+    const dosesFrasco = m.sessoes>0 ? Math.round((m.dosesUsadas/m.sessoes)*10)/10 : 0;
+    const capacidade  = FRASCO_DOSES[med] || 1;
+    html2 += '<div style="margin-bottom:12px">'
+      +'<div class="bi-bar-row" style="margin-bottom:3px">'
+        +'<div class="bi-bar-label" style="width:80px">'+nome+'</div>'
+        +'<div class="bi-bar-track"><div class="bi-bar-fill" style="width:'+Math.min(pct,100)+'%;background:'+cor+'"></div></div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+cor+';width:42px;text-align:right">'+pct+'%</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:14px;padding-left:80px;font-size:10px;color:var(--gray)">'
+        +'<span><strong style="color:var(--navy)">'+pacFrasco+'</strong> pac/frasco</span>'
+        +'<span><strong style="color:var(--navy)">'+dosesFrasco+'</strong> doses/frasco</span>'
+        +'<span>'+m.dosesUsadas+'/'+m.dosesMax+' doses</span>'
+        +'<span>'+m.sessoes+' sessão(ões)</span>'
+      +'</div>'
       +'</div>';
   });
-  html2 += '<div style="font-size:10px;color:var(--gray);margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-light)">'
-    +Object.entries(metricas).map(([med,m])=>'<strong>'+m.sessoes+'</strong> sessão(ões) de '+med.split(' ')[0]).join(' · ')+'</div>';
+  html2 += '<div style="font-size:10px;color:var(--gray);margin-top:6px;padding-top:8px;border-top:1px solid var(--gray-light)">'
+    +'Capacidade padrão do frasco: '+Object.keys(FRASCO_DOSES).filter(k=>metricas[k]).map(k=>{
+       const nm = k.includes('8mg')?'Eylia 8mg':k.includes('Eylia')?'Eylia 2mg':k.split(' ')[0];
+       return nm+' = '+FRASCO_DOSES[k];
+     }).join(' · ')+' doses</div>';
   html2 += '</div>';
 
   // Card 2: Relação pacientes por sessão
