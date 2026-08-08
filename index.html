@@ -462,6 +462,30 @@
   </div>
 </div>
 
+<!-- ══ MODAL FRACIONAMENTO RETROATIVO ══ -->
+<div class="modal-overlay hidden" id="modal-frac-retro">
+  <div class="modal" style="width:500px">
+    <div class="modal-header"><h2>🧪 Registrar Fracionamento</h2><button class="close-btn" onclick="closeModal('modal-frac-retro')">×</button></div>
+    <div class="modal-body">
+      <div id="frac-retro-info" style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px"></div>
+      <div style="font-size:12px;color:var(--gray);margin-bottom:10px">
+        Selecione os pacientes que compartilharam o frasco nesta data:
+        <span id="frac-retro-capacidade" style="float:right;font-weight:700;color:var(--navy)"></span>
+      </div>
+      <div id="frac-retro-lista" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-light);font-size:12px">
+        Doses utilizadas: <strong id="frac-retro-usadas">0</strong> /
+        <strong id="frac-retro-total">0</strong>
+        <span id="frac-retro-aviso" style="color:var(--red);margin-left:8px;display:none">⚠️ Limite excedido</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-frac-retro')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarFracionamentoRetro()">Salvar Fracionamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL EDITAR DATAS ══ -->
 <div class="modal-overlay hidden" id="modal-datas">
   <div class="modal" style="width:420px">
@@ -1254,15 +1278,21 @@ function verDetalhe(id){
     </div>
     ${p.obs&&p.obs!==''?`<div style="background:#f8f9fc;border-radius:6px;padding:8px 11px;font-size:12px;color:var(--gray);margin-bottom:11px">📝 ${p.obs}</div>`:''}
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold);margin-bottom:7px">Histórico de Injeções</div>
-    ${injHist.length?injHist.map(inj=>`<div class="inject-row">
+    ${injHist.length?injHist.map((inj,idx)=>`<div class="inject-row">
       <div><div style="font-weight:600">💉 ${inj.olho} — ${inj.med}
         ${inj.doseCarregamento?`<span class="badge badge-blue" style="margin-left:5px">Dose ${inj.doseCarregamento} carg.</span>`:''}
         ${inj.trocaMedicacao?`<span class="badge badge-yellow" style="margin-left:5px">Troca: ${medBadge(inj.trocaMedicacao)}→${medBadge(inj.med)}</span>`:''}
       </div>
-      <div style="font-size:11px;color:var(--gray)">${fmtDate(inj.data)} · ${inj.intervalo}sem ${inj.obs?'· '+inj.obs:''}</div></div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <div style="font-size:11px;color:var(--gray)">${fmtDate(inj.data)} · ${inj.intervalo}sem ${inj.obs?'· '+inj.obs:''}</div>
+      ${inj.fracionamento?`<div style="font-size:11px;margin-top:3px;padding:3px 7px;background:#f0fdf4;border-radius:5px;color:var(--green)">
+        🧪 Fracionamento: ${inj.fracionamento.dosesUsadas}/${inj.fracionamento.maxDoses} doses
+        — ${inj.fracionamento.pacientes.map(x=>x.nome.split(' ')[0]).join(', ')}
+      </div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
         ${inj.relatorio?'<span class="badge badge-green">Rel.✓</span>':''}
         ${inj.octSolicitado?'<span class="badge badge-blue">OCT✓</span>':''}
+        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}',${idx})">🧪 Fracionamento</button>`:'<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span>'}
       </div></div>`).join(''):`<div style="color:var(--gray);font-size:13px;padding:8px 0">Nenhuma injeção registrada.</div>`}
     ${p.tipo==='convenio'?`<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-light);">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
@@ -1640,7 +1670,105 @@ function renderAlertasPage(){
   renderAlertasBanner(div,alertas);
 }
 
-// ── Editar datas do paciente
+// ── Fracionamento retroativo
+let fracRetroId = null;
+let fracRetroIdx = null;
+
+function abrirFracionamentoRetro(pacId, injIdx){
+  const p = getPac().find(x=>x.id===pacId); if(!p) return;
+  const inj = p.injecoes[injIdx]; if(!inj) return;
+  fracRetroId = pacId;
+  fracRetroIdx = injIdx;
+
+  const med = inj.med;
+  const dataInj = inj.data;
+  const maxDoses = FRASCO_DOSES[med] || 1;
+  const dosesBase = inj.olho==='AO' ? 2 : 1;
+
+  document.getElementById('frac-retro-info').innerHTML =
+    '<strong>'+p.nome+'</strong> — '+fmtDate(dataInj)+'<br>'
+    +'<span style="color:var(--gray)">'+med+' · '+inj.olho+'</span>';
+  document.getElementById('frac-retro-capacidade').textContent = 'Frasco: '+maxDoses+' dose(s)';
+  document.getElementById('frac-retro-total').textContent = maxDoses;
+
+  const lista = document.getElementById('frac-retro-lista');
+  lista.innerHTML = '';
+
+  // Paciente atual — sempre incluso
+  lista.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px">'
+    +'<span style="color:var(--green)">✓</span>'
+    +'<span style="flex:1;font-weight:600">'+p.nome+' (este paciente)</span>'
+    +'<span style="font-size:11px;color:var(--gray)">'+inj.olho+' ('+dosesBase+' dose'+(dosesBase>1?'s':'')+')</span>'
+    +'</div>';
+
+  // Buscar outros pacientes que fizeram injeção no mesmo dia (pelo histórico real)
+  const outrosPacientes = [];
+  getPac().forEach(pac=>{
+    if(pac.id === pacId) return;
+    (pac.injecoes||[]).forEach((injP, iP)=>{
+      if(injP.data === dataInj){
+        outrosPacientes.push({pac, inj:injP, idx:iP});
+      }
+    });
+  });
+
+  if(maxDoses === 1){
+    lista.innerHTML += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:6px 0">Medicamento em dose individual — sem fracionamento.</div>';
+  } else if(outrosPacientes.length === 0){
+    lista.innerHTML += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:6px 0">Nenhum outro paciente com injeção registrada nesta data.</div>';
+  } else {
+    outrosPacientes.forEach(({pac:op, inj:oi})=>{
+      const doses = oi.olho==='AO' ? 2 : 1;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:12px;border:1px solid var(--gray-light)';
+      row.innerHTML = '<input type="checkbox" class="frac-retro-check" data-doses="'+doses+'" data-id="'+op.id+'" style="width:auto" onchange="atualizarContadorFracRetro()">'
+        +'<span style="flex:1">'+op.nome+'</span>'
+        +'<span style="font-size:11px;color:var(--gray)">'+oi.olho+' ('+doses+' dose'+(doses>1?'s':'')+')</span>';
+      lista.appendChild(row);
+    });
+  }
+
+  atualizarContadorFracRetro();
+  closeModal('modal-det');
+  openModal('modal-frac-retro');
+}
+
+function atualizarContadorFracRetro(){
+  const p = getPac().find(x=>x.id===fracRetroId); if(!p) return;
+  const inj = p.injecoes[fracRetroIdx]; if(!inj) return;
+  const maxDoses = FRASCO_DOSES[inj.med] || 1;
+  const dosesBase = inj.olho==='AO' ? 2 : 1;
+  let dosesExtras = 0;
+  document.querySelectorAll('.frac-retro-check:checked').forEach(c=>{ dosesExtras += parseInt(c.dataset.doses)||1; });
+  const total = dosesBase + dosesExtras;
+  document.getElementById('frac-retro-usadas').textContent = total;
+  document.getElementById('frac-retro-aviso').style.display = total > maxDoses ? '' : 'none';
+}
+
+async function salvarFracionamentoRetro(){
+  const p = getPac().find(x=>x.id===fracRetroId); if(!p) return;
+  const inj = p.injecoes[fracRetroIdx]; if(!inj) return;
+  const maxDoses = FRASCO_DOSES[inj.med] || 1;
+  const dosesBase = inj.olho==='AO' ? 2 : 1;
+  const pacientesFrac = [{id:p.id, nome:p.nome, lateral:inj.olho, doses:dosesBase}];
+  document.querySelectorAll('.frac-retro-check:checked').forEach(c=>{
+    const op = getPac().find(x=>x.id===c.dataset.id);
+    if(op) pacientesFrac.push({id:op.id, nome:op.nome, lateral:op.injecoes?.find(i=>i.data===inj.data)?.olho||'OD', doses:parseInt(c.dataset.doses)||1});
+  });
+  inj.fracionamento = {
+    medicacao: inj.med,
+    maxDoses,
+    dosesUsadas: pacientesFrac.reduce((s,x)=>s+x.doses,0),
+    pacientes: pacientesFrac
+  };
+  atualizarCache(p);
+  closeModal('modal-frac-retro');
+  verDetalhe(p.id);
+  await persistir(p, false);
+  showToast('🧪 Fracionamento registrado — '+fmtDate(inj.data));
+}
+
+
 function abrirEditarDatas(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
   currentId=id;
