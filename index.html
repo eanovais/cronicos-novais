@@ -1292,7 +1292,7 @@ function verDetalhe(id){
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
         ${inj.relatorio?'<span class="badge badge-green">Rel.✓</span>':''}
         ${inj.octSolicitado?'<span class="badge badge-blue">OCT✓</span>':''}
-        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}',${idx})">🧪 Fracionamento</button>`:`<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--gold);color:var(--gold)" onclick="editarFracionamento('${p.id}',${idx})">✏️ Editar</button>`}
+        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}',${idx})">🧪 Fracionamento</button>`:`<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--gold);color:var(--gold)" onclick="editarFracionamento('${p.id}',${idx})">✏️ Editar</button> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--red);color:var(--red)" onclick="excluirFracionamento('${p.id}',${idx})">🗑️ Excluir</button>`}
       </div></div>`).join(''):`<div style="color:var(--gray);font-size:13px;padding:8px 0">Nenhuma injeção registrada.</div>`}
     ${p.tipo==='convenio'?`<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-light);">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
@@ -1763,6 +1763,30 @@ function atualizarContadorFracRetro(){
   if(aviso) aviso.style.display = total > maxDoses ? '' : 'none';
   // Garantir que todos os checkboxes ficam habilitados
   document.querySelectorAll('.frac-retro-check').forEach(c=>{ c.disabled = false; });
+}
+
+// ── Excluir fracionamento de um paciente (e limpar nos demais do grupo)
+async function excluirFracionamento(pacId, injIdx){
+  const p = getPac().find(x=>x.id===pacId); if(!p) return;
+  const inj = p.injecoes[injIdx]; if(!inj || !inj.fracionamento) return;
+
+  if(!confirm('Excluir o fracionamento desta injeção?\nO fracionamento será removido de todos os pacientes do grupo.')) return;
+
+  // Coletar todos os pacientes do grupo antes de apagar
+  const todos = inj.fracionamento.pacientes.map(x=>x.id);
+
+  // Apagar fracionamento em todos
+  for(const id of todos){
+    const op = getPac().find(x=>x.id===id); if(!op) continue;
+    const injOp = op.injecoes?.find(i=>i.data===inj.data); if(!injOp) continue;
+    delete injOp.fracionamento;
+    atualizarCache(op);
+    await persistir(op, false);
+  }
+
+  closeModal('modal-det');
+  verDetalhe(pacId);
+  showToast('🗑️ Fracionamento excluído de '+todos.length+' paciente(s) — '+fmtDate(inj.data));
 }
 
 // ── Editar fracionamento já salvo
