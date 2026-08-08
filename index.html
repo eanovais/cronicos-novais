@@ -2497,7 +2497,7 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
   html2 += '<div class="bi-kpi" style="border-color:#7c3aed"><div class="bk-label">Sessões Registradas</div><div class="bk-value" style="color:#7c3aed">'+totalSessoes+'</div><div class="bk-sub">frascos compartilhados</div></div>';
   html2 += '<div class="bi-kpi" style="border-color:#0891b2"><div class="bk-label">Total Doses Utilizadas</div><div class="bk-value" style="color:#0891b2">'+totalDosesUsadas+'/'+totalDosesMax+'</div><div class="bk-sub">doses usadas / capacidade total</div></div>';
   html2 += '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Aproveitamento Geral</div><div class="bk-value" style="color:'+(aproveitamentoGeral>=80?'var(--green)':aproveitamentoGeral>=60?'var(--gold)':'var(--red)')+'">'+aproveitamentoGeral+'%</div><div class="bk-sub">eficiência dos frascos</div></div>';
-  html2 += '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Pacientes / Frasco</div><div class="bk-value" style="color:var(--gold)">'+pacPorFrasco+'</div><div class="bk-sub">'+totalPacientes+' pacientes · '+dosesPorFrasco+' doses/frasco</div></div>';
+  html2 += '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Doses / Frasco</div><div class="bk-value" style="color:var(--gold)">'+dosesPorFrasco+'</div><div class="bk-sub">média de doses por frasco</div></div>';
   html2 += '</div>';
 
   // Aproveitamento por medicação
