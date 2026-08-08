@@ -1490,6 +1490,19 @@ async function salvarInjecao(){
   const msg=novasDoses>=totalCarreg&&['3-carregamento','4-carregamento'].includes(p.protocolo)?`✅ Carregamento completo! Próxima: ${fmtDate(p.proximaInjecao)}`:`💉 Injeção registrada — próxima: ${fmtDate(p.proximaInjecao)}`;
   showToast(msg);
   await persistir(p,false);
+  // Salvar fracionamento automaticamente nos outros pacientes
+  if(fracData && fracData.pacientes && fracData.pacientes.length > 1){
+    for(const fp of fracData.pacientes){
+      if(fp.id === p.id) continue;
+      const op = getPac().find(x=>x.id===fp.id);
+      if(!op) continue;
+      const injOp = op.injecoes?.find(i=>i.data===data);
+      if(!injOp) continue;
+      injOp.fracionamento = fracData;
+      atualizarCache(op);
+      await persistir(op, false);
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1753,19 +1766,41 @@ async function salvarFracionamentoRetro(){
   const pacientesFrac = [{id:p.id, nome:p.nome, lateral:inj.olho, doses:dosesBase}];
   document.querySelectorAll('.frac-retro-check:checked').forEach(c=>{
     const op = getPac().find(x=>x.id===c.dataset.id);
-    if(op) pacientesFrac.push({id:op.id, nome:op.nome, lateral:op.injecoes?.find(i=>i.data===inj.data)?.olho||'OD', doses:parseInt(c.dataset.doses)||1});
+    if(op){
+      const injOp = op.injecoes?.find(i=>i.data===inj.data);
+      pacientesFrac.push({id:op.id, nome:op.nome, lateral:injOp?.olho||'OD', doses:parseInt(c.dataset.doses)||1});
+    }
   });
-  inj.fracionamento = {
+
+  const fracData = {
     medicacao: inj.med,
     maxDoses,
     dosesUsadas: pacientesFrac.reduce((s,x)=>s+x.doses,0),
     pacientes: pacientesFrac
   };
+
+  // Salvar no paciente atual
+  inj.fracionamento = fracData;
   atualizarCache(p);
+  await persistir(p, false);
+
+  // ── Salvar automaticamente em todos os outros pacientes do fracionamento
+  const outrosPacientes = pacientesFrac.filter(x=>x.id !== p.id);
+  for(const fp of outrosPacientes){
+    const op = getPac().find(x=>x.id===fp.id);
+    if(!op) continue;
+    // Encontrar a injeção do mesmo dia
+    const injOp = op.injecoes?.find(i=>i.data===inj.data);
+    if(!injOp) continue;
+    // Registrar fracionamento com os mesmos dados
+    injOp.fracionamento = fracData;
+    atualizarCache(op);
+    await persistir(op, false);
+  }
+
   closeModal('modal-frac-retro');
   verDetalhe(p.id);
-  await persistir(p, false);
-  showToast('🧪 Fracionamento registrado — '+fmtDate(inj.data));
+  showToast('🧪 Fracionamento registrado em '+ pacientesFrac.length+' paciente(s) — '+fmtDate(inj.data));
 }
 
 
@@ -2292,6 +2327,130 @@ function mesAnoLabel(key){
   return meses[parseInt(m)-1] + '/' + y.slice(2);
 }
 
+// ════════════════════════════════════════════════════
+// FARMACOECONOMIA
+// ════════════════════════════════════════════════════
+function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
+  // Coletar todas as sessões de fracionamento únicas
+  // Uma sessão = um conjunto de pacientes que compartilharam um frasco na mesma data
+  const sessoes = {};
+  todos.forEach(p=>{
+    (p.injecoes||[]).forEach(inj=>{
+      if(!inj.fracionamento) return;
+      const f = inj.fracionamento;
+      // Chave única por data + medicação + conjunto de pacientes
+      const key = inj.data + '|' + f.medicacao + '|' + f.pacientes.map(x=>x.id).sort().join(',');
+      if(!sessoes[key]){
+        sessoes[key] = {
+          data: inj.data,
+          medicacao: f.medicacao,
+          maxDoses: f.maxDoses,
+          dosesUsadas: f.dosesUsadas,
+          pacientes: f.pacientes,
+        };
+      }
+    });
+  });
+
+  const lista = Object.values(sessoes).sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+  // Métricas por medicação
+  const metricas = {};
+  lista.forEach(s=>{
+    if(!metricas[s.medicacao]) metricas[s.medicacao] = {sessoes:0, dosesMax:0, dosesUsadas:0};
+    metricas[s.medicacao].sessoes++;
+    metricas[s.medicacao].dosesMax += s.maxDoses;
+    metricas[s.medicacao].dosesUsadas += s.dosesUsadas;
+  });
+
+  if(lista.length === 0){
+    return '<div class="bi-section-title">🧪 Farmacoeconomia — Fracionamento de Frascos</div>'
+      +'<div class="bi-card" style="margin-bottom:16px"><div class="empty"><span class="ei">🧪</span><p>Nenhum fracionamento registrado ainda.</p></div></div>';
+  }
+
+  // Métricas cards
+  const totalSessoes = lista.length;
+  const totalDosesMax = Object.values(metricas).reduce((s,m)=>s+m.dosesMax,0);
+  const totalDosesUsadas = Object.values(metricas).reduce((s,m)=>s+m.dosesUsadas,0);
+  const aproveitamentoGeral = totalDosesMax > 0 ? Math.round((totalDosesUsadas/totalDosesMax)*100) : 0;
+
+  let html2 = '<div class="bi-section-title">🧪 Farmacoeconomia — Fracionamento de Frascos</div>';
+
+  // KPIs de farmacoeconomia
+  html2 += '<div class="bi-grid" style="margin-bottom:16px">';
+  html2 += '<div class="bi-kpi" style="border-color:#7c3aed"><div class="bk-label">Sessões Registradas</div><div class="bk-value" style="color:#7c3aed">'+totalSessoes+'</div><div class="bk-sub">frascos compartilhados</div></div>';
+  html2 += '<div class="bi-kpi" style="border-color:#0891b2"><div class="bk-label">Total Doses Utilizadas</div><div class="bk-value" style="color:#0891b2">'+totalDosesUsadas+'/'+totalDosesMax+'</div><div class="bk-sub">doses usadas / capacidade total</div></div>';
+  html2 += '<div class="bi-kpi" style="border-color:var(--green)"><div class="bk-label">Aproveitamento Geral</div><div class="bk-value" style="color:'+(aproveitamentoGeral>=80?'var(--green)':aproveitamentoGeral>=60?'var(--gold)':'var(--red)')+'">'+aproveitamentoGeral+'%</div><div class="bk-sub">eficiência dos frascos</div></div>';
+  html2 += '<div class="bi-kpi" style="border-color:var(--gold)"><div class="bk-label">Pacientes / Sessão</div><div class="bk-value" style="color:var(--gold)">'+(totalSessoes>0?Math.round(totalDosesUsadas/totalSessoes*10)/10:0)+'</div><div class="bk-sub">média de doses por frasco</div></div>';
+  html2 += '</div>';
+
+  // Aproveitamento por medicação
+  html2 += '<div class="bi-grid-2" style="margin-bottom:16px">';
+
+  // Card 1: Aproveitamento por medicação (barras)
+  html2 += '<div class="bi-card"><h4>💊 Aproveitamento por Medicação</h4>';
+  Object.entries(metricas).sort((a,b)=>b[1].sessoes-a[1].sessoes).forEach(([med, m])=>{
+    const pct = m.dosesMax > 0 ? Math.round((m.dosesUsadas/m.dosesMax)*100) : 0;
+    const cor = pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
+    const nome = med.includes('8mg')?'Eylia 8mg':med.includes('Eylia')?'Eylia 2mg':med.includes('Vabysmo')?'Vabysmo':med.includes('Avastin')?'Avastin':'Ozurdex';
+    html2 += '<div class="bi-bar-row">'
+      +'<div class="bi-bar-label" style="width:90px">'+nome+'</div>'
+      +'<div class="bi-bar-track"><div class="bi-bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+cor+';width:45px;text-align:right">'+pct+'%</div>'
+      +'<div style="font-size:10px;color:var(--gray);width:55px;text-align:right">'+m.dosesUsadas+'/'+m.dosesMax+' doses</div>'
+      +'</div>';
+  });
+  html2 += '<div style="font-size:10px;color:var(--gray);margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-light)">'
+    +Object.entries(metricas).map(([med,m])=>'<strong>'+m.sessoes+'</strong> sessão(ões) de '+med.split(' ')[0]).join(' · ')+'</div>';
+  html2 += '</div>';
+
+  // Card 2: Relação pacientes por sessão
+  html2 += '<div class="bi-card"><h4>👥 Pacientes por Sessão (últimas 10)</h4>';
+  const ultimas10 = lista.slice(0,10);
+  if(ultimas10.length === 0){
+    html2 += '<div class="empty"><p>Sem sessões</p></div>';
+  } else {
+    ultimas10.forEach(s=>{
+      const pct = Math.round((s.dosesUsadas/s.maxDoses)*100);
+      const cor = pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
+      html2 += '<div style="padding:6px 0;border-bottom:1px solid var(--gray-light);font-size:12px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
+        +'<span style="font-weight:600">'+fmtDate(s.data)+' — '+medBadge(s.medicacao)+'</span>'
+        +'<span style="font-size:11px;font-weight:700;color:'+cor+'">'+s.dosesUsadas+'/'+s.maxDoses+' ('+pct+'%)</span>'
+        +'</div>'
+        +'<div style="color:var(--gray);font-size:11px">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+'</div>'
+        +'</div>';
+    });
+  }
+  html2 += '</div>';
+  html2 += '</div>';
+
+  // Tabela completa de sessões
+  html2 += '<div class="bi-card" style="margin-bottom:16px"><h4>📋 Histórico Completo de Fracionamentos</h4>';
+  html2 += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+  html2 += '<thead><tr>'
+    +'<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray);text-transform:uppercase">Data</th>'
+    +'<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray);text-transform:uppercase">Medicação</th>'
+    +'<th style="text-align:center;padding:6px 10px;font-size:10px;color:var(--gray);text-transform:uppercase">Doses</th>'
+    +'<th style="text-align:center;padding:6px 10px;font-size:10px;color:var(--gray);text-transform:uppercase">Aproveito.</th>'
+    +'<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--gray);text-transform:uppercase">Pacientes</th>'
+    +'</tr></thead><tbody>';
+  lista.forEach((s,i)=>{
+    const pct = Math.round((s.dosesUsadas/s.maxDoses)*100);
+    const cor = pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
+    html2 += '<tr style="border-top:1px solid var(--gray-light);background:'+(i%2===0?'#f8fafc':'white')+'">'
+      +'<td style="padding:7px 10px;font-size:12px;font-weight:600">'+fmtDate(s.data)+'</td>'
+      +'<td style="padding:7px 10px;font-size:12px">'+medBadge(s.medicacao)+'</td>'
+      +'<td style="padding:7px 10px;text-align:center;font-size:12px">'+s.dosesUsadas+'/'+s.maxDoses+'</td>'
+      +'<td style="padding:7px 10px;text-align:center;font-weight:700;color:'+cor+'">'+pct+'%</td>'
+      +'<td style="padding:7px 10px;font-size:11px;color:var(--gray)">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+'</td>'
+      +'</tr>';
+  });
+  html2 += '</tbody></table></div></div>';
+
+  return html2;
+}
+
 function renderBI(){
   const pac = getPac();
   const todos = pac.filter(p => p.statusPaciente !== 'obito');
@@ -2470,6 +2629,7 @@ function renderBI(){
   + '<div class="bi-card"><h4>\u{1F5D3}\uFE0F Distribuição por Intervalo</h4>'+barChart(intervalos.filter(i=>porInterv[i]>0).map(i=>[i+' semanas',porInterv[i]]),Math.max(...intervalos.map(i=>porInterv[i]||0),1),i=>CORES[i%CORES.length])+'</div>'
   + '<div class="bi-card"><h4>\u{1F4C6} Por Dia da Semana</h4>'+barChart([['Terça (Città/Cons.)',porDia[2]||0],['Quinta (Rio Vision)',porDia[4]||0]].filter(([,v])=>v>0),Math.max(porDia[2]||0,porDia[4]||0,1),i=>[CORES[0],CORES[2]][i])+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-light);font-size:11px;color:var(--gray)">Média: <strong>'+(mesesComFat.length>0?Math.round((porDia[2]||0)/mesesComFat.length):0)+' inj/terça</strong> · <strong>'+(mesesComFat.length>0?Math.round((porDia[4]||0)/mesesComFat.length):0)+' inj/quinta</strong></div></div>'
   + '</div>'
+  + renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate)
   + '<div style="text-align:right;font-size:11px;color:var(--gray);margin-top:8px">Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+' · R$ '+VALOR_INJECAO+'/olho (convênio)</div>';
 }
 
