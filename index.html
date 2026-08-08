@@ -1292,7 +1292,7 @@ function verDetalhe(id){
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
         ${inj.relatorio?'<span class="badge badge-green">Rel.✓</span>':''}
         ${inj.octSolicitado?'<span class="badge badge-blue">OCT✓</span>':''}
-        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}',${idx})">🧪 Fracionamento</button>`:'<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span>'}
+        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}',${idx})">🧪 Fracionamento</button>`:`<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--gold);color:var(--gold)" onclick="editarFracionamento('${p.id}',${idx})">✏️ Editar</button>`}
       </div></div>`).join(''):`<div style="color:var(--gray);font-size:13px;padding:8px 0">Nenhuma injeção registrada.</div>`}
     ${p.tipo==='convenio'?`<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-light);">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
@@ -1756,7 +1756,79 @@ function atualizarContadorFracRetro(){
   document.querySelectorAll('.frac-retro-check:checked').forEach(c=>{ dosesExtras += parseInt(c.dataset.doses)||1; });
   const total = dosesBase + dosesExtras;
   document.getElementById('frac-retro-usadas').textContent = total;
-  document.getElementById('frac-retro-aviso').style.display = total > maxDoses ? '' : 'none';
+  // Apenas aviso visual — nunca bloqueia nem desabilita checkboxes
+  const aviso = document.getElementById('frac-retro-aviso');
+  if(aviso) aviso.style.display = total > maxDoses ? '' : 'none';
+  // Garantir que todos os checkboxes ficam habilitados
+  document.querySelectorAll('.frac-retro-check').forEach(c=>{ c.disabled = false; });
+}
+
+// ── Editar fracionamento já salvo
+function editarFracionamento(pacId, injIdx){
+  // Reutiliza o mesmo modal, mas pré-seleciona os pacientes já salvos
+  // e permite qualquer número de doses sem bloqueio
+  fracRetroId = pacId;
+  fracRetroIdx = injIdx;
+  const p = getPac().find(x=>x.id===pacId); if(!p) return;
+  const inj = p.injecoes[injIdx]; if(!inj) return;
+  const dataInj = inj.data;
+  const med = inj.med;
+  const maxDoses = FRASCO_DOSES[med] || 1;
+  const dosesBase = inj.olho==='AO' ? 2 : 1;
+
+  // IDs já salvos no fracionamento (exceto o paciente atual)
+  const idsJaSalvos = inj.fracionamento
+    ? inj.fracionamento.pacientes.filter(x=>x.id!==pacId).map(x=>x.id)
+    : [];
+
+  document.getElementById('frac-retro-info').innerHTML =
+    '✏️ <strong>Editar fracionamento</strong> — '+p.nome+'<br>'
+    +'<span style="color:var(--gray)">'+fmtDate(dataInj)+' · '+med+'</span>';
+  document.getElementById('frac-retro-capacidade').textContent = 'Frasco: '+maxDoses+' dose(s)';
+  document.getElementById('frac-retro-total').textContent = maxDoses;
+
+  const lista = document.getElementById('frac-retro-lista');
+  lista.innerHTML = '';
+
+  // Paciente atual — sempre incluso
+  lista.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px">'
+    +'<span style="color:var(--green)">✓</span>'
+    +'<span style="flex:1;font-weight:600">'+p.nome+' (este paciente)</span>'
+    +'<span style="font-size:11px;color:var(--gray)">'+inj.olho+' ('+dosesBase+' dose'+(dosesBase>1?'s':'')+')</span>'
+    +'</div>';
+
+  // Buscar TODOS os pacientes com injeção no mesmo dia (incluindo os já fracionados)
+  const outrosPacientes = [];
+  getPac().forEach(pac=>{
+    if(pac.id === pacId) return;
+    (pac.injecoes||[]).forEach(injP=>{
+      if(injP.data === dataInj){
+        outrosPacientes.push({pac, inj:injP});
+      }
+    });
+  });
+
+  if(maxDoses === 1){
+    lista.innerHTML += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:6px 0">Medicamento em dose individual.</div>';
+  } else if(outrosPacientes.length === 0){
+    lista.innerHTML += '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:6px 0">Nenhum outro paciente com injeção nesta data.</div>';
+  } else {
+    outrosPacientes.forEach(({pac:op, inj:oi})=>{
+      const doses = oi.olho==='AO' ? 2 : 1;
+      const jaSalvo = idsJaSalvos.includes(op.id);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:12px;border:1px solid var(--gray-light)'
+        + (jaSalvo?';background:#f0fdf4':'');
+      row.innerHTML = '<input type="checkbox" class="frac-retro-check" data-doses="'+doses+'" data-id="'+op.id+'" style="width:auto"'+(jaSalvo?' checked':'')+' onchange="atualizarContadorFracRetro()">'
+        +'<span style="flex:1">'+op.nome+(jaSalvo?' <span style="font-size:10px;color:var(--green)">(já incluído)</span>':'')+'</span>'
+        +'<span style="font-size:11px;color:var(--gray)">'+oi.olho+' ('+doses+' dose'+(doses>1?'s':'')+')</span>';
+      lista.appendChild(row);
+    });
+  }
+
+  atualizarContadorFracRetro();
+  closeModal('modal-det');
+  openModal('modal-frac-retro');
 }
 
 async function salvarFracionamentoRetro(){
@@ -1902,7 +1974,11 @@ function atualizarContadorFrac(){
   document.querySelectorAll('.frac-pac-check:checked').forEach(c=>{ dosesExtras += parseInt(c.dataset.doses)||1; });
   const total = dosesBase + dosesExtras;
   document.getElementById('inj-frac-usadas').textContent = total;
-  document.getElementById('inj-frac-aviso').style.display = total > maxDoses ? '' : 'none';
+  // Apenas aviso visual — nunca bloqueia nem desabilita checkboxes
+  const aviso = document.getElementById('inj-frac-aviso');
+  if(aviso) aviso.style.display = total > maxDoses ? '' : 'none';
+  // Garantir que todos os checkboxes ficam habilitados
+  document.querySelectorAll('.frac-pac-check').forEach(c=>{ c.disabled = false; });
 }
 
 function getFracionamentoDados(){
