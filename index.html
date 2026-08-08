@@ -476,7 +476,7 @@
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-light);font-size:12px">
         Doses utilizadas: <strong id="frac-retro-usadas">0</strong> /
         <strong id="frac-retro-total">0</strong>
-        <span id="frac-retro-aviso" style="color:var(--red);margin-left:8px;display:none">⚠️ Limite excedido</span>
+        <span id="frac-retro-aviso" style="color:var(--gold);margin-left:8px;display:none">⚠️ Acima da capacidade padrão do frasco</span>
       </div>
     </div>
     <div class="modal-footer">
@@ -621,7 +621,7 @@
             <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-light);font-size:12px">
               Doses utilizadas: <strong id="inj-frac-usadas">0</strong> /
               <strong id="inj-frac-total">0</strong>
-              <span id="inj-frac-aviso" style="color:var(--red);margin-left:8px;display:none">⚠️ Limite excedido</span>
+              <span id="inj-frac-aviso" style="color:var(--gold);margin-left:8px;display:none">⚠️ Acima da capacidade padrão do frasco</span>
             </div>
           </div>
         </div>
@@ -1715,11 +1715,12 @@ function abrirFracionamentoRetro(pacId, injIdx){
     +'</div>';
 
   // Buscar outros pacientes que fizeram injeção no mesmo dia (pelo histórico real)
+  // Excluir pacientes que já têm fracionamento registrado nesse dia
   const outrosPacientes = [];
   getPac().forEach(pac=>{
     if(pac.id === pacId) return;
     (pac.injecoes||[]).forEach((injP, iP)=>{
-      if(injP.data === dataInj){
+      if(injP.data === dataInj && !injP.fracionamento){
         outrosPacientes.push({pac, inj:injP, idx:iP});
       }
     });
@@ -1863,10 +1864,12 @@ function carregarListaFracionamento(){
     return;
   }
   // Pacientes com injeção programada para a mesma data
+  // Excluir pacientes que já têm fracionamento registrado nesse dia
   const todos = getPac().filter(x =>
     x.id !== currentId &&
     x.proximaInjecao === dataInj &&
-    ['ativo','agendado'].includes(x.statusPaciente)
+    ['ativo','agendado'].includes(x.statusPaciente) &&
+    !(x.injecoes||[]).some(i => i.data === dataInj && i.fracionamento)
   );
   const lista = document.getElementById('inj-frac-lista');
   lista.innerHTML = '';
