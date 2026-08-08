@@ -1714,16 +1714,18 @@ function abrirFracionamentoRetro(pacId, injIdx){
     +'<span style="font-size:11px;color:var(--gray)">'+inj.olho+' ('+dosesBase+' dose'+(dosesBase>1?'s':'')+')</span>'
     +'</div>';
 
-  // Buscar outros pacientes que fizeram injeção no mesmo dia (pelo histórico real)
+  // Buscar outros pacientes com injeção no mesmo dia — DEDUPLICADO por paciente
   // Excluir pacientes que já têm fracionamento registrado nesse dia
+  const vistos2 = new Set();
   const outrosPacientes = [];
   getPac().forEach(pac=>{
     if(pac.id === pacId) return;
-    (pac.injecoes||[]).forEach((injP, iP)=>{
-      if(injP.data === dataInj && !injP.fracionamento){
-        outrosPacientes.push({pac, inj:injP, idx:iP});
-      }
-    });
+    if(vistos2.has(pac.id)) return;
+    const injP = (pac.injecoes||[]).find(i=>i.data===dataInj && !i.fracionamento);
+    if(injP){
+      vistos2.add(pac.id);
+      outrosPacientes.push({pac, inj:injP});
+    }
   });
 
   if(maxDoses === 1){
@@ -1765,8 +1767,6 @@ function atualizarContadorFracRetro(){
 
 // ── Editar fracionamento já salvo
 function editarFracionamento(pacId, injIdx){
-  // Reutiliza o mesmo modal, mas pré-seleciona os pacientes já salvos
-  // e permite qualquer número de doses sem bloqueio
   fracRetroId = pacId;
   fracRetroIdx = injIdx;
   const p = getPac().find(x=>x.id===pacId); if(!p) return;
@@ -1790,22 +1790,25 @@ function editarFracionamento(pacId, injIdx){
   const lista = document.getElementById('frac-retro-lista');
   lista.innerHTML = '';
 
-  // Paciente atual — sempre incluso
+  // Paciente atual — sempre incluso (fixo, sem checkbox)
   lista.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:12px">'
     +'<span style="color:var(--green)">✓</span>'
     +'<span style="flex:1;font-weight:600">'+p.nome+' (este paciente)</span>'
     +'<span style="font-size:11px;color:var(--gray)">'+inj.olho+' ('+dosesBase+' dose'+(dosesBase>1?'s':'')+')</span>'
     +'</div>';
 
-  // Buscar TODOS os pacientes com injeção no mesmo dia (incluindo os já fracionados)
+  // Buscar outros pacientes com injeção no mesmo dia — DEDUPLICADO por paciente
+  const vistos = new Set();
   const outrosPacientes = [];
   getPac().forEach(pac=>{
     if(pac.id === pacId) return;
-    (pac.injecoes||[]).forEach(injP=>{
-      if(injP.data === dataInj){
-        outrosPacientes.push({pac, inj:injP});
-      }
-    });
+    if(vistos.has(pac.id)) return; // evitar duplicatas do mesmo paciente
+    // Pegar a primeira injeção desse paciente nessa data
+    const injP = (pac.injecoes||[]).find(i=>i.data===dataInj);
+    if(injP){
+      vistos.add(pac.id);
+      outrosPacientes.push({pac, inj:injP});
+    }
   });
 
   if(maxDoses === 1){
@@ -1836,6 +1839,13 @@ async function salvarFracionamentoRetro(){
   const inj = p.injecoes[fracRetroIdx]; if(!inj) return;
   const maxDoses = FRASCO_DOSES[inj.med] || 1;
   const dosesBase = inj.olho==='AO' ? 2 : 1;
+
+  // IDs que estavam no fracionamento antes desta edição
+  const idsAntes = inj.fracionamento
+    ? inj.fracionamento.pacientes.map(x=>x.id)
+    : [p.id];
+
+  // Montar novo fracionamento com os selecionados agora
   const pacientesFrac = [{id:p.id, nome:p.nome, lateral:inj.olho, doses:dosesBase}];
   document.querySelectorAll('.frac-retro-check:checked').forEach(c=>{
     const op = getPac().find(x=>x.id===c.dataset.id);
@@ -1844,6 +1854,10 @@ async function salvarFracionamentoRetro(){
       pacientesFrac.push({id:op.id, nome:op.nome, lateral:injOp?.olho||'OD', doses:parseInt(c.dataset.doses)||1});
     }
   });
+
+  const idsMantidos = pacientesFrac.map(x=>x.id);
+  // Pacientes que foram REMOVIDOS do fracionamento
+  const idsRemovidos = idsAntes.filter(id => !idsMantidos.includes(id) && id !== p.id);
 
   const fracData = {
     medicacao: inj.med,
@@ -1857,23 +1871,28 @@ async function salvarFracionamentoRetro(){
   atualizarCache(p);
   await persistir(p, false);
 
-  // ── Salvar automaticamente em todos os outros pacientes do fracionamento
-  const outrosPacientes = pacientesFrac.filter(x=>x.id !== p.id);
-  for(const fp of outrosPacientes){
-    const op = getPac().find(x=>x.id===fp.id);
-    if(!op) continue;
-    // Encontrar a injeção do mesmo dia
-    const injOp = op.injecoes?.find(i=>i.data===inj.data);
-    if(!injOp) continue;
-    // Registrar fracionamento com os mesmos dados
+  // Atualizar nos pacientes mantidos
+  for(const fp of pacientesFrac.filter(x=>x.id !== p.id)){
+    const op = getPac().find(x=>x.id===fp.id); if(!op) continue;
+    const injOp = op.injecoes?.find(i=>i.data===inj.data); if(!injOp) continue;
     injOp.fracionamento = fracData;
+    atualizarCache(op);
+    await persistir(op, false);
+  }
+
+  // Limpar fracionamento dos pacientes REMOVIDOS
+  for(const idRem of idsRemovidos){
+    const op = getPac().find(x=>x.id===idRem); if(!op) continue;
+    const injOp = op.injecoes?.find(i=>i.data===inj.data); if(!injOp) continue;
+    delete injOp.fracionamento;
     atualizarCache(op);
     await persistir(op, false);
   }
 
   closeModal('modal-frac-retro');
   verDetalhe(p.id);
-  showToast('🧪 Fracionamento registrado em '+ pacientesFrac.length+' paciente(s) — '+fmtDate(inj.data));
+  const removMsg = idsRemovidos.length > 0 ? ' · '+idsRemovidos.length+' removido(s)' : '';
+  showToast('🧪 Fracionamento atualizado em '+pacientesFrac.length+' paciente(s)'+removMsg+' — '+fmtDate(inj.data));
 }
 
 
