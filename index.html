@@ -380,6 +380,7 @@
     <div class="nav-item" id="nav-agenda" onclick="navigate('agenda')"><span class="ni">📅</span> Agenda</div>
     <div class="nav-item" id="nav-autorizacoes" onclick="navigate('autorizacoes')"><span class="ni">📋</span> Autorizações<span class="nav-badge" id="nb-auth" style="display:none">0</span></div>
     <div class="nav-item" id="nav-bi" onclick="navigate('bi')"><span class="ni">📈</span> BI — Financeiro</div>
+    <div class="nav-item" id="nav-farmacia" onclick="navigate('farmacia')"><span class="ni">🧪</span> Farmacoeconomia</div>
     <div class="nav-item" id="nav-voz" onclick="navigate('voz')"><span class="ni">🎙️</span> Comando de Voz</div>
   </nav>
 </div>
@@ -455,9 +456,41 @@
       <div id="bi-content"></div>
     </div>
 
+    <!-- FARMACOECONOMIA -->
+    <div class="section" id="section-farmacia">
+      <div id="farmacia-content"></div>
+    </div>
+
     <!-- VOZ -->
     <div class="section" id="section-voz">
       <div id="voz-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR INJEÇÃO ══ -->
+<div class="modal-overlay hidden" id="modal-edit-inj">
+  <div class="modal" style="width:470px">
+    <div class="modal-header"><h2>✏️ Editar Injeção</h2><button class="close-btn" onclick="closeModal('modal-edit-inj')">×</button></div>
+    <div class="modal-body">
+      <div id="ei-info" style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Data da injeção</label><input type="date" id="ei-data"></div>
+        <div class="form-group"><label>Olho aplicado</label><select id="ei-olho"><option value="OD">OD — Direito</option><option value="OE">OE — Esquerdo</option><option value="AO">AO — Ambos</option></select></div>
+        <div class="form-group full"><label>Medicação</label><select id="ei-med"><option value="Eylia 2mg (Aflibercept)">Eylia 2mg — Aflibercept</option><option value="Eylia 8mg (Aflibercept HD)">Eylia 8mg — Aflibercept HD</option><option value="Vabysmo (Faricimabe)">Vabysmo — Faricimabe</option><option value="Avastin (Bevacizumab)">Avastin — Bevacizumab</option><option value="Ozurdex (Dexametasona)">Ozurdex — Dexametasona</option></select></div>
+        <div class="form-group"><label>Intervalo registrado</label><select id="ei-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="10">10 semanas</option><option value="12">12 semanas</option><option value="14">14 semanas</option><option value="16">16 semanas</option><option value="18">18 semanas</option><option value="20">20 semanas</option></select></div>
+        <div class="form-group full"><label>Observações</label><input type="text" id="ei-obs" placeholder="Opcional"></div>
+      </div>
+      <div id="ei-aviso-frac" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400e;margin-top:10px">
+        ⚠️ Esta injeção tem fracionamento registrado. Se você alterar a <strong>data</strong> ou a <strong>medicação</strong>, o fracionamento será removido do grupo para evitar inconsistência.
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-danger btn-sm" onclick="excluirInjecao()">🗑️ Excluir injeção</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" onclick="closeModal('modal-edit-inj')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicaoInjecao()">Salvar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1071,7 +1104,7 @@ function getPac(){ return pacientesCache; }
 // ════════════════════════════════════════════════════
 // UNIDADE / NAVEGAÇÃO
 // ════════════════════════════════════════════════════
-const NAV_LABELS={dashboard:'Dashboard',pacientes:'Pacientes',alertas:'Alertas',agenda:'Agenda',autorizacoes:'Autorizações',bi:'📈 BI — Financeiro',voz:'🎙️ Comando de Voz'};
+const NAV_LABELS={dashboard:'Dashboard',pacientes:'Pacientes',alertas:'Alertas',agenda:'Agenda',autorizacoes:'Autorizações',bi:'📈 BI — Financeiro',farmacia:'🧪 Farmacoeconomia',voz:'🎙️ Comando de Voz'};
 function navigate(sec){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1093,6 +1126,7 @@ function navigate(sec){
     }
     renderBI();
   }
+  if(sec==='farmacia')     renderFarmacia();
   if(sec==='voz')          renderVoz();
 }
 
@@ -1285,14 +1319,14 @@ function verDetalhe(id){
       </div>
       <div style="font-size:11px;color:var(--gray)">${fmtDate(inj.data)} · ${inj.intervalo}sem ${inj.obs?'· '+inj.obs:''}</div>
       ${inj.fracionamento?`<div style="font-size:11px;margin-top:3px;padding:3px 7px;background:#f0fdf4;border-radius:5px;color:var(--green)">
-        🧪 Fracionamento: ${inj.fracionamento.dosesUsadas}/${inj.fracionamento.maxDoses} doses
-        — ${inj.fracionamento.pacientes.map(x=>x.nome.split(' ')[0]).join(', ')}
+        ${inj.fracionamento.individual?'1️⃣ Frasco individual':'🧪 Fracionamento'}: ${inj.fracionamento.dosesUsadas}/${inj.fracionamento.maxDoses} doses${inj.fracionamento.individual?'':' — '+inj.fracionamento.pacientes.map(x=>x.nome.split(' ')[0]).join(', ')}
       </div>`:''}
       </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
         ${inj.relatorio?'<span class="badge badge-green">Rel.✓</span>':''}
         ${inj.octSolicitado?'<span class="badge badge-blue">OCT✓</span>':''}
-        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}','${inj.id||''}','${inj.data}')">🧪 Fracionamento</button>`:`<span class="badge badge-green" style="font-size:10px">🧪 Frac.✓</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--gold);color:var(--gold)" onclick="editarFracionamento('${p.id}','${inj.id||''}','${inj.data}')">✏️ Editar</button> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--red);color:var(--red)" onclick="excluirFracionamento('${p.id}','${inj.id||''}','${inj.data}')">🗑️ Excluir</button>`}
+        <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--navy);color:var(--navy)" onclick="abrirEditarInjecao('${p.id}','${inj.id||''}','${inj.data}')">✏️ Injeção</button>
+        ${!inj.fracionamento?`<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px" onclick="abrirFracionamentoRetro('${p.id}','${inj.id||''}','${inj.data}')">🧪 Fracionar</button> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:#0891b2;color:#0891b2" onclick="marcarFrascoIndividual('${p.id}','${inj.id||''}','${inj.data}')">1️⃣ Individual</button>`:`<span class="badge badge-green" style="font-size:10px">${inj.fracionamento.individual?'1️⃣ Individual':'🧪 Frac.✓'}</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--gold);color:var(--gold)" onclick="editarFracionamento('${p.id}','${inj.id||''}','${inj.data}')">✏️ Frac.</button> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;border-color:var(--red);color:var(--red)" onclick="excluirFracionamento('${p.id}','${inj.id||''}','${inj.data}')">🗑️ Frac.</button>`}
       </div></div>`).join(''):`<div style="color:var(--gray);font-size:13px;padding:8px 0">Nenhuma injeção registrada.</div>`}
     ${p.tipo==='convenio'?`<div style="margin-top:11px;padding-top:11px;border-top:1px solid var(--gray-light);">
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
@@ -1681,6 +1715,123 @@ function renderAlertasPage(){
   const div=document.getElementById('alertas-content');
   if(!alertas.length){div.innerHTML='<div class="empty"><span class="ei">🔔</span><p>Nenhum alerta</p></div>';return;}
   renderAlertasBanner(div,alertas);
+}
+
+// ── Edição de injeções + frasco individual
+let editInjPacId = null, editInjId = null, editInjData = null;
+
+// Remove o fracionamento de todo o grupo vinculado a uma injeção
+async function _limparGrupoFrac(inj){
+  if(!inj || !inj.fracionamento) return 0;
+  const ids = inj.fracionamento.pacientes.map(x=>x.id);
+  let n = 0;
+  for(const id of ids){
+    const op = getPac().find(x=>x.id===id); if(!op) continue;
+    const injOp = (op.injecoes||[]).find(i => i.data === inj.data && i.fracionamento);
+    if(!injOp) continue;
+    delete injOp.fracionamento;
+    atualizarCache(op);
+    await persistir(op, false);
+    n++;
+  }
+  return n;
+}
+
+// Marca a injeção como frasco individual (1 frasco para 1 paciente)
+async function marcarFrascoIndividual(pacId, injId, injData){
+  const p = getPac().find(x=>x.id===pacId); if(!p) return;
+  const inj = acharInjecao(p, injId, injData);
+  if(!inj){ showToast('⚠️ Injeção não encontrada'); return; }
+  const maxDoses = FRASCO_DOSES[inj.med] || 1;
+  const doses = inj.olho==='AO' ? 2 : 1;
+  inj.fracionamento = {
+    medicacao: inj.med,
+    maxDoses,
+    dosesUsadas: doses,
+    individual: true,
+    pacientes: [{id:p.id, nome:p.nome, lateral:inj.olho, doses}]
+  };
+  atualizarCache(p);
+  await persistir(p, false);
+  renderAll();
+  verDetalhe(p.id);
+  showToast('1️⃣ Frasco individual registrado — '+fmtDate(inj.data));
+}
+
+function abrirEditarInjecao(pacId, injId, injData){
+  const p = getPac().find(x=>x.id===pacId); if(!p) return;
+  const inj = acharInjecao(p, injId, injData);
+  if(!inj){ showToast('⚠️ Injeção não encontrada'); return; }
+  editInjPacId = pacId; editInjId = inj.id||''; editInjData = inj.data;
+  document.getElementById('ei-info').innerHTML =
+    '<strong>'+p.nome+'</strong><br><span style="color:var(--gray)">Registro atual: '
+    +fmtDate(inj.data)+' · '+inj.med+' · '+inj.olho+'</span>';
+  document.getElementById('ei-data').value   = inj.data||'';
+  document.getElementById('ei-olho').value   = inj.olho||'OD';
+  document.getElementById('ei-med').value    = inj.med||'';
+  document.getElementById('ei-interv').value = String(inj.intervalo||4);
+  document.getElementById('ei-obs').value    = inj.obs||'';
+  document.getElementById('ei-aviso-frac').style.display = inj.fracionamento ? '' : 'none';
+  closeModal('modal-det');
+  openModal('modal-edit-inj');
+}
+
+async function salvarEdicaoInjecao(){
+  const p = getPac().find(x=>x.id===editInjPacId); if(!p) return;
+  const inj = acharInjecao(p, editInjId, editInjData);
+  if(!inj){ showToast('⚠️ Injeção não encontrada'); return; }
+
+  const novaData   = document.getElementById('ei-data').value;
+  if(!novaData){ alert('Informe a data da injeção.'); return; }
+  const novoOlho   = document.getElementById('ei-olho').value;
+  const novaMed    = document.getElementById('ei-med').value;
+  const novoInterv = parseInt(document.getElementById('ei-interv').value)||4;
+  const novaObs    = document.getElementById('ei-obs').value;
+
+  // Alterar data ou medicação invalida o vínculo do fracionamento
+  const mudouChave = (novaData !== inj.data) || (novaMed !== inj.med);
+  let fracRemovido = false;
+  if(inj.fracionamento && mudouChave){
+    await _limparGrupoFrac(inj);
+    fracRemovido = true;
+  }
+
+  inj.data = novaData; inj.olho = novoOlho; inj.med = novaMed;
+  inj.intervalo = novoInterv; inj.obs = novaObs;
+
+  const datas = (p.injecoes||[]).map(i=>i.data).filter(d=>d && isValidDate(d)).sort();
+  p.ultimaInjecao = datas.length ? datas[datas.length-1] : '';
+
+  atualizarCache(p);
+  closeModal('modal-edit-inj');
+  await persistir(p, false);
+  renderAll();
+  verDetalhe(p.id);
+  showToast('✏️ Injeção atualizada — '+fmtDate(novaData)+(fracRemovido?' · fracionamento removido':''));
+}
+
+async function excluirInjecao(){
+  const p = getPac().find(x=>x.id===editInjPacId); if(!p) return;
+  const inj = acharInjecao(p, editInjId, editInjData);
+  if(!inj){ showToast('⚠️ Injeção não encontrada'); return; }
+  if(!confirm('Excluir definitivamente a injeção de '+fmtDate(inj.data)+'?\nEsta ação não pode ser desfeita.')) return;
+
+  const dataRef = inj.data;
+  if(inj.fracionamento) await _limparGrupoFrac(inj);
+
+  const idx = p.injecoes.indexOf(inj);
+  if(idx >= 0) p.injecoes.splice(idx, 1);
+
+  const datas = (p.injecoes||[]).map(i=>i.data).filter(d=>d && isValidDate(d)).sort();
+  p.ultimaInjecao = datas.length ? datas[datas.length-1] : '';
+  p.dosesCarregamentoFeitas = (p.injecoes||[]).filter(i=>i.doseCarregamento).length;
+
+  atualizarCache(p);
+  closeModal('modal-edit-inj');
+  await persistir(p, false);
+  renderAll();
+  verDetalhe(p.id);
+  showToast('🗑️ Injeção excluída — '+fmtDate(dataRef));
 }
 
 // ── Fracionamento retroativo
@@ -2360,6 +2511,7 @@ function renderAll(){
   if(sec==='alertas')      renderAlertasPage();
   if(sec==='agenda')       renderAgenda();
   if(sec==='autorizacoes') renderAutorizacoes();
+  if(sec==='farmacia')     renderFarmacia();
   updateNavBadges(getPac());
 }
 
@@ -2442,6 +2594,16 @@ function mesAnoLabel(key){
 // ════════════════════════════════════════════════════
 // FARMACOECONOMIA
 // ════════════════════════════════════════════════════
+function renderFarmacia(){
+  const pac = getPac();
+  const todos = pac.filter(p => p.statusPaciente !== 'obito');
+  const injFeitas = [];
+  todos.forEach(p => { (p.injecoes||[]).forEach(inj => { injFeitas.push({...inj, paciente:p}); }); });
+  const fmtBRLlocal = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  document.getElementById('farmacia-content').innerHTML =
+    renderFarmacoeconomia(todos, injFeitas, fmtBRLlocal, fmtDate);
+}
+
 function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
   // Coletar todas as sessões de fracionamento únicas
   // Uma sessão = um conjunto de pacientes que compartilharam um frasco na mesma data
@@ -2459,6 +2621,7 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
           maxDoses: f.maxDoses,
           dosesUsadas: f.dosesUsadas,
           pacientes: f.pacientes,
+          individual: !!f.individual,
         };
       }
     });
@@ -2547,7 +2710,7 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
         +'<span style="font-weight:600">'+fmtDate(s.data)+' — '+medBadge(s.medicacao)+'</span>'
         +'<span style="font-size:11px;font-weight:700;color:'+cor+'">'+s.dosesUsadas+'/'+s.maxDoses+' ('+pct+'%)</span>'
         +'</div>'
-        +'<div style="color:var(--gray);font-size:11px">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+'</div>'
+        +'<div style="color:var(--gray);font-size:11px">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+(s.individual?' <span style="color:#0891b2">· frasco individual</span>':'')+'</div>'
         +'</div>';
     });
   }
@@ -2572,7 +2735,7 @@ function renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate){
       +'<td style="padding:7px 10px;font-size:12px">'+medBadge(s.medicacao)+'</td>'
       +'<td style="padding:7px 10px;text-align:center;font-size:12px">'+s.dosesUsadas+'/'+s.maxDoses+'</td>'
       +'<td style="padding:7px 10px;text-align:center;font-weight:700;color:'+cor+'">'+pct+'%</td>'
-      +'<td style="padding:7px 10px;font-size:11px;color:var(--gray)">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+'</td>'
+      +'<td style="padding:7px 10px;font-size:11px;color:var(--gray)">'+s.pacientes.map(x=>x.nome.split(' ')[0]+' '+x.nome.split(' ').slice(-1)[0]+' ('+x.lateral+')').join(' · ')+(s.individual?' <span style="color:#0891b2;font-weight:600">· individual</span>':'')+'</td>'
       +'</tr>';
   });
   html2 += '</tbody></table></div></div>';
@@ -2758,7 +2921,6 @@ function renderBI(){
   + '<div class="bi-card"><h4>\u{1F5D3}\uFE0F Distribuição por Intervalo</h4>'+barChart(intervalos.filter(i=>porInterv[i]>0).map(i=>[i+' semanas',porInterv[i]]),Math.max(...intervalos.map(i=>porInterv[i]||0),1),i=>CORES[i%CORES.length])+'</div>'
   + '<div class="bi-card"><h4>\u{1F4C6} Por Dia da Semana</h4>'+barChart([['Terça (Città/Cons.)',porDia[2]||0],['Quinta (Rio Vision)',porDia[4]||0]].filter(([,v])=>v>0),Math.max(porDia[2]||0,porDia[4]||0,1),i=>[CORES[0],CORES[2]][i])+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-light);font-size:11px;color:var(--gray)">Média: <strong>'+(mesesComFat.length>0?Math.round((porDia[2]||0)/mesesComFat.length):0)+' inj/terça</strong> · <strong>'+(mesesComFat.length>0?Math.round((porDia[4]||0)/mesesComFat.length):0)+' inj/quinta</strong></div></div>'
   + '</div>'
-  + renderFarmacoeconomia(todos, injFeitas, fmtBRL, fmtDate)
   + '<div style="text-align:right;font-size:11px;color:var(--gray);margin-top:8px">Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+' · R$ '+VALOR_INJECAO+'/olho (convênio)</div>';
 }
 
