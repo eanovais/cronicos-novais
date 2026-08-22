@@ -267,31 +267,6 @@
   .bi-legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
   .bi-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin:20px 0 12px;}
 
-  /* ── VOZ ── */
-  .voz-card{background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:28px;margin-bottom:18px;}
-  .voz-mic-btn{width:100px;height:100px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 20px;transition:all .2s;box-shadow:0 4px 20px rgba(160,120,48,.4);}
-  .voz-mic-btn:hover{transform:scale(1.06);background:var(--gold-light);}
-  .voz-mic-btn.recording{background:var(--red);animation:micPulse 1s infinite;box-shadow:0 4px 20px rgba(220,38,38,.5);}
-  @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-  .voz-transcript{width:100%;min-height:80px;padding:12px 14px;border:2px solid var(--gray-light);border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;outline:none;transition:border .2s;}
-  .voz-transcript:focus{border-color:var(--gold);}
-  .voz-status{text-align:center;font-size:13px;color:var(--gray);margin:10px 0;min-height:20px;}
-  .voz-resultado{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px 18px;margin-top:14px;}
-  .voz-resultado.erro{background:#fef2f2;border-color:#fecaca;}
-  .voz-resultado .vr-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#166534;margin-bottom:10px;}
-  .voz-resultado.erro .vr-title{color:var(--red);}
-  .voz-campo{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.06);}
-  .voz-campo:last-child{border:none;}
-  .voz-campo .vc-label{font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;width:140px;flex-shrink:0;}
-  .voz-campo .vc-val{font-size:14px;font-weight:600;color:var(--navy);}
-  .voz-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
-  .voz-hint{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:14px;line-height:1.6;}
-  @media(max-width:640px){
-    .voz-card{padding:18px 14px;}
-    .voz-mic-btn{width:120px;height:120px;font-size:48px;}
-    .voz-campo .vc-label{width:100px;font-size:10px;}
-    .voz-actions .btn{flex:1;justify-content:center;}
-  }
 </style>
 </head>
 <body>
@@ -381,7 +356,6 @@
     <div class="nav-item" id="nav-autorizacoes" onclick="navigate('autorizacoes')"><span class="ni">📋</span> Autorizações<span class="nav-badge" id="nb-auth" style="display:none">0</span></div>
     <div class="nav-item" id="nav-bi" onclick="navigate('bi')"><span class="ni">📈</span> BI — Financeiro</div>
     <div class="nav-item" id="nav-farmacia" onclick="navigate('farmacia')"><span class="ni">🧪</span> Farmacoeconomia</div>
-    <div class="nav-item" id="nav-voz" onclick="navigate('voz')"><span class="ni">🎙️</span> Comando de Voz</div>
   </nav>
 </div>
 
@@ -461,10 +435,6 @@
       <div id="farmacia-content"></div>
     </div>
 
-    <!-- VOZ -->
-    <div class="section" id="section-voz">
-      <div id="voz-container"></div>
-    </div>
   </div>
 </div>
 
@@ -1104,7 +1074,7 @@ function getPac(){ return pacientesCache; }
 // ════════════════════════════════════════════════════
 // UNIDADE / NAVEGAÇÃO
 // ════════════════════════════════════════════════════
-const NAV_LABELS={dashboard:'Dashboard',pacientes:'Pacientes',alertas:'Alertas',agenda:'Agenda',autorizacoes:'Autorizações',bi:'📈 BI — Financeiro',farmacia:'🧪 Farmacoeconomia',voz:'🎙️ Comando de Voz'};
+const NAV_LABELS={dashboard:'Dashboard',pacientes:'Pacientes',alertas:'Alertas',agenda:'Agenda',autorizacoes:'Autorizações',bi:'📈 BI — Financeiro',farmacia:'🧪 Farmacoeconomia'};
 function navigate(sec){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1127,7 +1097,6 @@ function navigate(sec){
     renderBI();
   }
   if(sec==='farmacia')     renderFarmacia();
-  if(sec==='voz')          renderVoz();
 }
 
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -2924,388 +2893,6 @@ function renderBI(){
   + '<div style="text-align:right;font-size:11px;color:var(--gray);margin-top:8px">Atualizado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})+' · R$ '+VALOR_INJECAO+'/olho (convênio)</div>';
 }
 
-// Chave API Anthropic — armazenada no navegador, nunca exposta no código
-function getAnthropicKey(){
-  return localStorage.getItem('anthropic_key_cronicos') || '';
-}
-function setAnthropicKey(k){
-  localStorage.setItem('anthropic_cronicos_configured', '1');
-  localStorage.setItem('anthropic_key_cronicos', k.trim());
-}
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640;
-
-let recognition = null;
-let vozInterpretado = null; // resultado da IA
-let vozTranscrito  = '';
-
-function renderVoz(){
-  // Verificar se chave está configurada
-  if(!getAnthropicKey()){
-    document.getElementById('voz-container').innerHTML = `
-      <div class="voz-card" style="max-width:480px;margin:0 auto">
-        <div style="text-align:center;margin-bottom:20px">
-          <div style="font-size:36px;margin-bottom:10px">🔑</div>
-          <h3 style="font-size:16px;font-weight:700;margin-bottom:6px">Configurar Chave API</h3>
-          <p style="font-size:13px;color:var(--gray)">Para usar o Comando de Voz, informe sua chave da API Anthropic. Ela será salva apenas neste navegador.</p>
-        </div>
-        <div class="form-group" style="margin-bottom:14px">
-          <label>Chave API Anthropic (sk-ant-...)</label>
-          <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px">
-        </div>
-        <button class="btn btn-primary" style="width:100%" onclick="salvarChaveAPI()">Salvar e continuar</button>
-        <p style="font-size:11px;color:var(--gray);margin-top:10px;text-align:center">A chave fica salva só neste dispositivo e nunca é enviada para o GitHub.</p>
-      </div>`;
-    return;
-  }
-  _renderVozInterna();
-}
-
-function salvarChaveAPI(){
-  const k = document.getElementById('api-key-input').value.trim();
-  if(!k || !k.startsWith('sk-ant')){
-    alert('Chave inválida. Deve começar com sk-ant-');
-    return;
-  }
-  setAnthropicKey(k);
-  showToast('✅ Chave API configurada!');
-  renderVoz();
-}
-
-function _renderVozInterna(){
-  const div = document.getElementById('voz-container');
-  div.innerHTML = `
-    <div class="voz-card">
-      <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--navy)">🎙️ Comando de Voz</h3>
-      <p style="font-size:13px;color:var(--gray);margin-bottom:18px">Fale ou digite uma atualização — a IA interpreta e atualiza o banco automaticamente.</p>
-
-      <div class="voz-hint">
-        <strong>Exemplos do que você pode dizer:</strong>
-        <ul class="voz-examples" style="margin-top:4px;padding-left:16px;">
-          <li>"Antônio Carlos fez Eylia 8mg no olho direito hoje, retorno em 8 semanas"</li>
-          <li>"Deise Soares fez Vabysmo OE em 17/06, próxima em 6 semanas"</li>
-          <li>"Gerson Carakushansky está em observação, OCT em 12 semanas"</li>
-          <li>"Eva de Jesus não realizou a injeção, reagendar em 4 semanas"</li>
-        </ul>
-      </div>
-
-      <button class="voz-mic-btn${isMobile?' mobile':''}" id="voz-mic-btn" onclick="toggleGravacao()" title="Clique para gravar">
-        🎙️
-      </button>
-
-      <div class="voz-status" id="voz-status">Toque no microfone para começar a gravar</div>
-
-      <textarea class="voz-transcript" id="voz-text" placeholder="Ou digite aqui o que aconteceu com o paciente..." rows="${isMobile?4:3}"></textarea>
-
-      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
-        <button class="btn btn-primary" style="flex:1" onclick="interpretarTexto()">🤖 Interpretar e Atualizar</button>
-        <button class="btn btn-outline" onclick="limparVoz()">✕ Limpar</button>
-      </div>
-    </div>
-
-    <div id="voz-resultado-area"></div>
-    <div id="voz-confirmacao-area"></div>`;
-}
-
-// ── GRAVAÇÃO ──
-let vozGravando = false;
-let vozTranscriptAcumulado = '';
-
-function toggleGravacao(){
-  if(vozGravando){
-    pararGravacao();
-  } else {
-    iniciarGravacao();
-  }
-}
-
-function iniciarGravacao(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition){
-    alert('Seu navegador não suporta reconhecimento de voz. Use o Chrome.');
-    return;
-  }
-
-  vozGravando = true;
-  vozTranscriptAcumulado = document.getElementById('voz-text').value || '';
-
-  recognition = new SpeechRecognition();
-  recognition.lang = 'pt-BR';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  const btn = document.getElementById('voz-mic-btn');
-  const status = document.getElementById('voz-status');
-  btn.classList.add('recording');
-  btn.innerHTML = '⏹️';
-  btn.title = 'Clique para parar a gravação';
-  status.innerHTML = '🔴 <strong>Gravando...</strong> Fale à vontade. Clique novamente no botão para parar.';
-
-  let finalTranscript = '';
-
-  recognition.onresult = e => {
-    let interim = '';
-    finalTranscript = '';
-    for(let i = 0; i < e.results.length; i++){
-      if(e.results[i].isFinal){
-        finalTranscript += e.results[i][0].transcript + ' ';
-      } else {
-        interim += e.results[i][0].transcript;
-      }
-    }
-    const full = (vozTranscriptAcumulado + ' ' + finalTranscript + interim).trim();
-    document.getElementById('voz-text').value = full;
-  };
-
-  recognition.onend = () => {
-    // Se ainda estiver no modo gravando (não foi parado manualmente),
-    // reinicia automaticamente para manter contínuo
-    if(vozGravando){
-      vozTranscriptAcumulado = document.getElementById('voz-text').value || '';
-      try { recognition.start(); } catch(e){}
-    }
-  };
-
-  recognition.onerror = e => {
-    if(e.error === 'no-speech') return; // ignorar silêncio
-    if(e.error === 'aborted') return;   // parada manual
-    const status = document.getElementById('voz-status');
-    if(status) status.textContent = '⚠️ Erro: ' + e.error;
-    vozGravando = false;
-    const btn = document.getElementById('voz-mic-btn');
-    if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; btn.title='Clique para gravar'; }
-  };
-
-  recognition.start();
-}
-
-function pararGravacao(){
-  vozGravando = false;
-  if(recognition){
-    try { recognition.stop(); } catch(e){}
-  }
-  const btn = document.getElementById('voz-mic-btn');
-  const status = document.getElementById('voz-status');
-  if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; btn.title='Clique para gravar'; }
-  if(status) status.textContent = '✓ Gravação concluída — clique em Interpretar e Atualizar';
-}
-
-// ── INTERPRETAR COM IA ──
-async function interpretarTexto(){
-  const texto = (document.getElementById('voz-text').value || '').trim();
-  if(!texto){ alert('Digite ou grave um comando primeiro.'); return; }
-
-  const resArea = document.getElementById('voz-resultado-area');
-  const confArea = document.getElementById('voz-confirmacao-area');
-  resArea.innerHTML = `<div class="voz-card" style="text-align:center;padding:24px"><div style="font-size:28px;margin-bottom:10px">🤖</div><p style="color:var(--gray)">Interpretando comando...</p></div>`;
-  confArea.innerHTML = '';
-
-  // Montar lista de pacientes para a IA
-  const pacientes = getPac().filter(p=>['ativo','observacao'].includes(p.statusPaciente));
-  const listaNomes = pacientes.map(p=>`${p.nome} (${p.lateral}, ${medBadge(p.medicacao)})`).join('\n');
-
-  const prompt = `Você é um assistente médico que interpreta comandos de voz sobre pacientes oftalmológicos crônicos em tratamento com injeções intravítreas.
-
-LISTA DE PACIENTES ATIVOS:
-${listaNomes}
-
-COMANDO RECEBIDO: "${texto}"
-
-DATA DE HOJE: ${todayStr()}
-
-Interprete o comando e retorne APENAS um JSON válido (sem markdown, sem explicações) com esta estrutura exata:
-{
-  "acao": "registrar_injecao" | "confirmar_injecao" | "observacao" | "nao_realizado" | "nao_identificado",
-  "paciente_nome": "nome exato como consta na lista acima",
-  "paciente_encontrado": true | false,
-  "data": "YYYY-MM-DD",
-  "olho": "OD" | "OE" | "AO",
-  "medicacao": "Eylia 2mg (Aflibercept)" | "Eylia 8mg (Aflibercept HD)" | "Vabysmo (Faricimabe)" | "Avastin (Bevacizumab)" | "Ozurdex (Dexametasona)",
-  "intervalo_semanas": 4 | 6 | 8 | 10 | 12,
-  "obs": "observação clínica se mencionada",
-  "resumo": "resumo em português do que será feito",
-  "erro": "mensagem de erro se não conseguir interpretar"
-}
-
-Regras:
-- Se o paciente não for encontrado na lista, paciente_encontrado=false e acao="nao_identificado"
-- Se a data não for mencionada, use hoje: ${todayStr()}
-- Se o olho não for mencionado, use o lateral padrão do paciente
-- "Eylia" ou "Alia" ou "aflibercept" 2mg = "Eylia 2mg (Aflibercept)"
-- "Eylia 8" ou "Alia 8" ou "aflibercept HD" = "Eylia 8mg (Aflibercept HD)"
-- "Vabysmo" ou "faricimabe" = "Vabysmo (Faricimabe)"
-- "Avastin" ou "bevacizumabe" = "Avastin (Bevacizumab)"
-- "Ozurdex" = "Ozurdex (Dexametasona)"
-- "observação" ou "sem injeção" ou "observe and extend" = acao "observacao"
-- "não fez" ou "não realizou" = acao "nao_realizado"`;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': getAnthropicKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await resp.json();
-    if(data.error) throw new Error(data.error.message);
-
-    // Limpar markdown caso o modelo retorne ```json ... ```
-    let rawText = data.content[0].text.trim();
-    rawText = rawText.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
-    const json = JSON.parse(rawText);
-    vozInterpretado = json;
-    vozInterpretado._paciente = pacientes.find(p => p.nome === json.paciente_nome);
-    mostrarResultado(json);
-
-  } catch(e) {
-    resArea.innerHTML = `<div class="voz-card"><div class="voz-resultado erro"><div class="vr-title">❌ Erro na interpretação</div><p style="font-size:13px">${e.message}</p></div></div>`;
-  }
-}
-
-function mostrarResultado(j){
-  const resArea = document.getElementById('voz-resultado-area');
-  const confArea = document.getElementById('voz-confirmacao-area');
-
-  if(!j.paciente_encontrado || j.acao === 'nao_identificado'){
-    resArea.innerHTML = `<div class="voz-card"><div class="voz-resultado erro">
-      <div class="vr-title">❌ Paciente não identificado</div>
-      <p style="font-size:13px;color:#991b1b">Não encontrei "${j.paciente_nome || 'nome não identificado'}" na lista de pacientes ativos. Verifique o nome e tente novamente.</p>
-    </div></div>`;
-    confArea.innerHTML = '';
-    return;
-  }
-
-  const acaoLabels = {
-    registrar_injecao: '💉 Registrar Injeção',
-    confirmar_injecao: '✅ Confirmar Injeção Realizada',
-    observacao:        '🔍 Iniciar Protocolo de Observação',
-    nao_realizado:     '🔄 Reagendar (Paciente Não Realizou)',
-  };
-
-  const p = vozInterpretado._paciente;
-  const novas = j.acao !== 'observacao' ? calcDatas(j.data, j.intervalo_semanas, unidadeAtual) : calcDatasObs(j.data, j.intervalo_semanas);
-
-  resArea.innerHTML = `<div class="voz-card">
-    <div class="voz-resultado">
-      <div class="vr-title">✓ Comando interpretado</div>
-      <div class="voz-campo"><span class="vc-label">Ação</span><span class="vc-val">${acaoLabels[j.acao]||j.acao}</span></div>
-      <div class="voz-campo"><span class="vc-label">Paciente</span><span class="vc-val">${j.paciente_nome}</span></div>
-      ${j.acao !== 'observacao' ? `<div class="voz-campo"><span class="vc-label">Medicação</span><span class="vc-val">${j.medicacao||p.medicacao}</span></div>` : ''}
-      ${j.acao !== 'observacao' ? `<div class="voz-campo"><span class="vc-label">Olho</span><span class="vc-val">${j.olho||p.lateral}</span></div>` : ''}
-      <div class="voz-campo"><span class="vc-label">Data</span><span class="vc-val">${fmtDate(j.data)}</span></div>
-      <div class="voz-campo"><span class="vc-label">Intervalo</span><span class="vc-val">${j.intervalo_semanas} semanas</span></div>
-      ${j.acao !== 'observacao'
-        ? `<div class="voz-campo"><span class="vc-label">💉 Próx. injeção</span><span class="vc-val" style="color:var(--navy)">${fmtDate(novas.proxInj)}</span></div>
-           <div class="voz-campo"><span class="vc-label">🩺 Consulta</span><span class="vc-val">${fmtDate(novas.proxConsulta)}</span></div>`
-        : `<div class="voz-campo"><span class="vc-label">📷 Próx. OCT</span><span class="vc-val">${fmtDate(novas.proxOCT)}</span></div>`
-      }
-      ${j.obs ? `<div class="voz-campo"><span class="vc-label">Obs.</span><span class="vc-val">${j.obs}</span></div>` : ''}
-    </div>
-    <div class="voz-actions">
-      <button class="btn btn-primary" style="flex:1" onclick="confirmarComandoVoz()">✓ Confirmar e Salvar</button>
-      <button class="btn btn-outline" onclick="limparVoz()">✕ Cancelar</button>
-    </div>
-  </div>`;
-  confArea.innerHTML = '';
-}
-
-async function confirmarComandoVoz(){
-  if(!vozInterpretado || !vozInterpretado._paciente) return;
-  const j = vozInterpretado;
-  const p = j._paciente;
-  const pac = getPac();
-  const target = pac.find(x=>x.id===p.id);
-  if(!target){ showToast('❌ Paciente não encontrado no cache'); return; }
-
-  const novas = j.acao !== 'observacao' ? calcDatas(j.data, j.intervalo_semanas, unidadeAtual) : calcDatasObs(j.data, j.intervalo_semanas);
-
-  if(j.acao === 'registrar_injecao' || j.acao === 'confirmar_injecao'){
-    const medUsada = j.medicacao || target.medicacao;
-    const trocouMed = medUsada !== target.medicacao;
-    const dosesAnt = getDosesFeitas(target);
-    const totalCarreg = dosesCarreg(medUsada);
-    const novasDoses = dosesAnt + 1;
-
-    target.injecoes.push({
-      id:genId(), data:j.data,
-      olho:j.olho||target.lateral,
-      med:medUsada, intervalo:j.intervalo_semanas,
-      obs:j.obs||'Registrado por comando de voz',
-      relatorio:false, octSolicitado:false,
-      doseCarregamento: novasDoses<=totalCarreg?novasDoses:null,
-      trocaMedicacao: trocouMed?target.medicacao:null
-    });
-    target.ultimaInjecao = j.data;
-    target.intervalo = j.intervalo_semanas;
-    target.lateral = j.olho || target.lateral;
-    if(trocouMed) target.medicacao = medUsada;
-    target.dosesCarregamentoFeitas = novasDoses;
-    if(['3-carregamento','4-carregamento'].includes(target.protocolo) && novasDoses >= totalCarreg)
-      target.protocolo = 'tratar-estender';
-    target.proximaInjecao = novas.proxInj;
-    target.proximaConsulta = novas.proxConsulta;
-    target.proximoOCT = novas.proxOCT;
-    target.aguardandoConfirmacao = false;
-    target.statusPaciente = 'ativo';
-    target.modoObservacao = false;
-    target.statusAuth = target.tipo==='convenio'?'pendente':'n/a';
-    target.statusAuthOCT = target.tipo==='convenio'?'pendente':'n/a';
-    target.statusAuthInj = target.tipo==='convenio'?'pendente':'n/a';
-
-  } else if(j.acao === 'observacao'){
-    target.statusPaciente = 'observacao';
-    target.modoObservacao = true;
-    target.proximoOCTObservacao = novas.proxOCT;
-    target.proximaConsulta = novas.proxConsulta;
-    target.proximaInjecao = '';
-    target.aguardandoConfirmacao = false;
-    target.obs = (target.obs?target.obs+' | ':'') + `Observação via voz (${todayStr()})`;
-
-  } else if(j.acao === 'nao_realizado'){
-    target.aguardandoConfirmacao = false;
-    target.proximaInjecao = novas.proxInj;
-    target.proximaConsulta = novas.proxConsulta;
-    target.proximoOCT = novas.proxOCT;
-  }
-
-  atualizarCache(target);
-  document.getElementById('voz-resultado-area').innerHTML = `<div class="voz-card" style="text-align:center;padding:24px">
-    <div style="font-size:40px;margin-bottom:10px">✅</div>
-    <div style="font-weight:700;font-size:16px;margin-bottom:6px">${target.nome}</div>
-    <div style="color:var(--gray);font-size:13px">Atualizado com sucesso! Próxima injeção: <strong>${fmtDate(target.proximaInjecao)||'—'}</strong></div>
-    <button class="btn btn-outline" style="margin-top:16px" onclick="limparVoz()">Novo comando</button>
-  </div>`;
-  document.getElementById('voz-confirmacao-area').innerHTML = '';
-
-  showToast(`✅ ${target.nome} — atualizado via comando de voz`);
-  await persistir(target, false);
-  updateNavBadges(getPac());
-}
-
-function limparVoz(){
-  vozInterpretado = null;
-  vozGravando = false;
-  vozTranscriptAcumulado = '';
-  if(recognition){ try{ recognition.stop(); }catch(e){} }
-  const t = document.getElementById('voz-text');
-  if(t) t.value = '';
-  const s = document.getElementById('voz-status');
-  if(s) s.textContent = 'Toque no microfone para começar a gravar';
-  const btn = document.getElementById('voz-mic-btn');
-  if(btn){ btn.classList.remove('recording'); btn.innerHTML='🎙️'; }
-  const r = document.getElementById('voz-resultado-area');
-  if(r) r.innerHTML = '';
-  const c = document.getElementById('voz-confirmacao-area');
-  if(c) c.innerHTML = '';
-}
 // ════════════════════════════════════════════════════
 // SISTEMA DE SENHAS + TELA INICIAL
 // ════════════════════════════════════════════════════
@@ -3413,7 +3000,6 @@ function init(){
   document.getElementById('np-data1').value=todayStr();
   toggleConv('np');
 
-  // Chave API configurada pelo usuário na aba Comando de Voz
 
   if(!WEBAPP_URL||WEBAPP_URL==='COLE_AQUI_A_URL_DO_WEBAPP'){
     document.getElementById('tela-inicial').classList.add('hidden');
@@ -3425,6 +3011,10 @@ function init(){
   // Sempre começa na tela de seleção — tela-inicial já está visível por padrão
 }
 
+// [D-050] Recurso de comando de voz removido. As linhas abaixo apagam a chave
+// da API que ficava em localStorage, em TODA maquina que abrir o sistema.
+// Manter ate haver certeza de que nao ha mais navegador com a chave guardada.
+try { localStorage.removeItem('anthropic_key_cronicos'); localStorage.removeItem('anthropic_cronicos_configured'); } catch(e) {}
 init();
 </script>
 </body>
