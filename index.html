@@ -1051,13 +1051,10 @@ async function persistir(p, isNovo) {
   setSyncStatus('saving');
   try {
     const action = isNovo ? 'salvarPaciente' : 'atualizarPaciente';
-    console.log(`[persistir] ${action} | ${p.nome} | proxInj:${p.proximaInjecao} | authOCT:${p.statusAuthOCT} | authInj:${p.statusAuthInj}`);
     const r = await apiPost({ action, paciente: p });
-    console.log('[persistir] resposta:', JSON.stringify(r));
     if(r && r.error) throw new Error(r.error);
     setSyncStatus('ok');
   } catch(e) {
-    console.error('[persistir] ERRO:', e.message);
     setSyncStatus('error', 'Erro ao salvar');
     showToast('❌ Erro ao salvar: ' + e.message);
   }
