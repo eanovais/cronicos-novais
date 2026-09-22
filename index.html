@@ -163,6 +163,10 @@
 
   .filter-bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:13px;}
   .filter-bar select,.filter-bar input{width:auto;padding:6px 10px;}
+  .sel-auth{width:auto;padding:4px 8px;font-size:12px;font-weight:600;}
+  .bloco-al-tit{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:10px 0 6px;}
+  .bloco-al-mais{font-size:12px;color:var(--blue);padding:6px 2px;font-style:italic;background:none;border:none;text-align:left;cursor:pointer;text-decoration:underline;font-family:inherit;display:block;}
+  .bloco-al-mais:hover{color:var(--navy);}
   .toggle-group{display:flex;gap:3px;}
   .toggle-btn{padding:5px 13px;border-radius:5px;border:1.5px solid var(--gray-light);background:white;cursor:pointer;font-size:12px;font-weight:600;color:var(--gray);transition:all .18s;font-family:inherit;}
   .toggle-btn.active{background:var(--navy);color:white;border-color:var(--navy);}
@@ -517,7 +521,7 @@
       <div class="form-divider">Dados do Paciente</div>
       <div class="form-group full"><label>Nome completo</label><input type="text" id="np-nome" placeholder="Nome do paciente"></div>
       <div class="form-group"><label>Data de nascimento</label><input type="date" id="np-nasc"></div>
-      <div class="form-group"><label>Telefone</label><input type="tel" id="np-tel" placeholder="(21) 99999-9999"></div>
+      <div class="form-group"><label>Telefone</label><input type="tel" id="np-tel" placeholder="(21) XXXXX-XXXX"></div>
       <div class="form-group"><label>Tipo</label><select id="np-tipo" onchange="toggleConv('np')"><option value="convenio">Convênio</option><option value="particular">Particular</option></select></div>
       <div class="form-group" id="np-fc-conv"><label>Convênio</label><input type="text" id="np-conv" placeholder="Ex: Unimed, Bradesco..."></div>
       <div class="form-group" id="np-fc-cart"><label>Nº Carteirinha</label><input type="text" id="np-cart"></div>
@@ -664,7 +668,7 @@
       <div class="form-grid">
         <div class="form-group full"><label>Paciente</label><input type="text" id="obs-pac" readonly></div>
         <div class="form-group"><label>Última injeção</label><input type="date" id="obs-ultinj"></div>
-        <div class="form-group"><label>Intervalo próximo OCT</label><select id="obs-interv"><option value="4">4 semanas</option><option value="6">6 semanas</option><option value="8">8 semanas</option><option value="12">12 semanas</option><option value="16">16 semanas</option><option value="24">24 semanas (6 meses)</option></select></div>
+        <div class="form-group"><label>Intervalo próximo OCT</label><select id="obs-interv"><option value="1">1 semana</option><option value="2">2 semanas</option><option value="3">3 semanas</option><option value="4">4 semanas</option><option value="5">5 semanas</option><option value="6">6 semanas</option><option value="7">7 semanas</option><option value="8">8 semanas</option><option value="9">9 semanas</option><option value="10">10 semanas</option><option value="11">11 semanas</option><option value="12">12 semanas</option><option value="16">16 semanas</option><option value="20">20 semanas</option><option value="24">24 semanas (6 meses)</option></select></div>
         <div class="form-group full" id="obs-info"></div>
         <div class="form-group full"><label>Motivo / observação</label><textarea id="obs-motivo" rows="2"></textarea></div>
       </div>
@@ -680,9 +684,10 @@
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group full"><label>Paciente</label><input type="text" id="inat-pac" readonly></div>
-        <div class="form-group full"><label>Motivo</label><select id="inat-motivo" onchange="updateInatMotivo()"><option value="perdido">Perda de seguimento</option><option value="obito">Óbito</option><option value="transferencia">Transferência</option><option value="alta">Alta médica definitiva</option><option value="outro">Outro</option></select></div>
+        <div class="form-group full"><label>Motivo</label><select id="inat-motivo" onchange="updateInatMotivo()"><option value="">— escolher —</option><option value="perdido">Perda de seguimento</option><option value="obito">Óbito</option><option value="transferencia">Transferência</option><option value="alta">Alta médica definitiva</option><option value="outro">Outro</option></select></div>
+        <div class="form-group full" id="inat-sub-row" style="display:none"><label>Por quê? <span style="color:var(--red)">*</span></label><select id="inat-submotivo" onchange="updateInatMotivo()"><option value="">— escolher —</option><option>Não atende / telefone errado</option><option>Mudou de cidade ou de serviço</option><option>Recusou continuar o tratamento</option><option>Dificuldade de transporte ou de acompanhante</option><option>Internado ou impossibilitado de vir</option><option value="outro">Outro — descrever abaixo</option></select></div>
         <div class="form-group"><label>Data</label><input type="date" id="inat-data"></div>
-        <div class="form-group full"><label>Observação</label><textarea id="inat-obs" rows="2"></textarea></div>
+        <div class="form-group full"><label>Observação <span id="inat-obs-req" style="color:var(--red);display:none">* obrigatória</span></label><textarea id="inat-obs" rows="2"></textarea></div>
       </div>
       <div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:10px 13px;font-size:12px;color:#991b1b">⚠️ O paciente sairá da fila ativa. Pode ser reativado depois.</div>
     </div>
@@ -790,6 +795,7 @@ async function recarregarDados() {
       if(!p.statusAuthInj  || p.statusAuthInj==='')  p.statusAuthInj  = p.tipo==='convenio' ? 'pendente' : 'n/a';
       if(!p.statusAuth     || p.statusAuth==='')      p.statusAuth     = p.tipo==='convenio' ? 'pendente' : 'n/a';
       if(!p.injecoes) p.injecoes = [];
+      if(!p.trilha) p.trilha = '';
       return p;
     });
     setSyncStatus('ok');
@@ -848,8 +854,21 @@ function calcDatas(fromDate,semanas,unidade){
   return { proxInj, proxConsulta, proxOCT:proxConsulta };
 }
 
+// ⛔ D-414 §14 (GC738) — O RETORNO NUNCA NASCE VENCIDO.
+// ⚠️ A ancora e `ultimaInjecao`, e para a coorte do botao «Sem injecao» — o
+//    atrasado, o sem data, o de carregamento que perdeu a data — `ancora + 4
+//    semanas` cai ANTES DE HOJE. O sistema gravava essa data e o painel passava
+//    a gritar «OCT atrasado N dias» no dia em que o paciente entrou em
+//    observacao. ⛔ Ninguem atrasou nada, e o falso atraso le-se IGUAL a um OCT
+//    que venceu de verdade — que e a regra 13 na forma canonica.
+// ⛔ O QUE ISTO NAO DECIDE: se a ancora deve ser HOJE ou a ULTIMA INJECAO no caso
+//    geral. Essa e regra clinica e esta com o Edu (D-414 §15). O que esta funcao
+//    passa a recusar e escrever um retorno JA EXPIRADO, que nao e decisao de
+//    ninguem — e um defeito.
+// ⚠️ Recalcula a partir de HOJE, mantendo o intervalo escolhido pelo medico.
 function calcDatasObs(fromDate,semanas){
-  const proxOCT=proxDiaSemana(addWeeks(fromDate,semanas),1);
+  let proxOCT=proxDiaSemana(addWeeks(fromDate,semanas),1);
+  if(daysDiff(proxOCT) < 0) proxOCT=proxDiaSemana(addWeeks(todayStr(),semanas),1);
   return { proxOCT, proxConsulta:proxOCT };
 }
 
@@ -862,7 +881,13 @@ function getStatus(p){
   if(p.statusPaciente==='faltou')   return 'faltou';
   if(p.statusPaciente==='observacao') return 'observacao';
   if(!['ativo'].includes(p.statusPaciente)) return p.statusPaciente;
-  if(!p.proximaInjecao||p.proximaInjecao==='') return 'sem-data';
+  // ⛔ D-413 §1 (GC716) — testava VAZIO; testa VALIDADE. Para `'a combinar'` o
+  //    `daysDiff` devolvia NaN, `NaN<0` e `NaN<=7` sao falsos, e esta funcao
+  //    devolvia 'em-dia': cracha VERDE, contado em `stat-emdia` e agrupado em
+  //    «Prontos para Agendar», enquanto o painel o punha em prioridade 0.
+  // ⚠️ Autorizado pelo Edu em 2026-09-21, gatilho 2: muda o que as telas MOSTRAM
+  //    sobre dados que ja existem. Nenhum dado e reescrito.
+  if(!p.proximaInjecao||!isValidDate(p.proximaInjecao)) return 'sem-data';
   const diff=daysDiff(p.proximaInjecao);
   if(p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true') return 'confirmacao';
   if(diff<0) return 'atrasado';
@@ -878,7 +903,14 @@ function statusBadge(p){
   if(s==='esta-semana') return `<span class="badge badge-yellow">🔔 Em ${diff}d</span>`;
   if(s==='em-dia')      return `<span class="badge badge-green">✓ Em dia</span>`;
   if(s==='observacao')  return `<span class="badge badge-teal">🔍 Observação</span>`;
-  if(s==='sem-data')    return `<span class="badge badge-gray">⚙ Completar dados</span>`;
+  // ⛔ D-412 §9 (GC717) — o Edu reservou «dados a completar» para o que NAO e
+  //    urgencia. Este cracha dava a MESMA frase, em cinza, ao paciente que JA
+  //    injeta e perdeu a data — que e a coorte de `prioridade 0`, topo do painel,
+  //    nunca cortada. ⚠️ Quem varre a lista deixava-o para depois.
+  // ⛔ A distincao e a MESMA fonte do alerta: nao ha aqui um segundo predicado.
+  if(s==='sem-data')    return jaRecebeuInjecao(p)
+    ? `<span class="badge badge-red">⚠ SEM DATA</span>`
+    : `<span class="badge badge-gray">⚙ Completar dados</span>`;
   if(s==='agendado')    return `<span class="badge badge-blue">📅 Agendado</span>`;
   if(s==='faltou')      return `<span class="badge badge-red">✗ Faltou</span>`;
   if(s==='resgatado')   return `<span class="badge badge-yellow">🔄 Resgatado</span>`;
@@ -919,7 +951,78 @@ function authInjBadge(p){
 // CARREGAMENTO
 // ════════════════════════════════════════════════════
 function dosesCarreg(med){ return LOADING_DOSES[med]||3; }
+// ⛔ D-413 §9 (AP03) — ESCAPE de texto de operador antes de ir para `innerHTML`.
+// ⚠️ Dois danos, e o PRIMEIRO e o provavel: um `<` seguido de letra — `<3`, um
+//    `<` de comparacao, algo colado — e consumido pelo parser, e **o texto que a
+//    pessoa escreveu deixa de ser legivel na ficha, sem aviso nenhum**. Isso e
+//    dado de paciente escrito e nao lido, item 3 da hierarquia.
+// ⛔ O segundo: a pagina guarda a base INTEIRA da unidade em `pacientesCache` e
+//    pode `fetch` para qualquer destino. Uma linha guardada num campo que
+//    qualquer operador preenche roda em toda sessao que abrir aquela ficha.
+// ⚠️ Isto era RESSALVA enquanto o campo era opcional. O D-413 §3 o tornou
+//    OBRIGATORIO, e o auditor declarou que ai vira PRE-CONDICAO.
+function esc(v){
+  return String(v==null?'':v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function getDosesFeitas(p){ return parseInt(p.dosesCarregamentoFeitas)||0; }
+
+// ⛔ D-412 §9 (GC715) — «NUNCA RECEBEU A PRIMEIRA APLICACAO» e a propriedade que
+//    o Edu nomeou. O aplicativo tem TRES testemunhas dela, e a primeira redacao
+//    lia so uma:
+//    1. `p.injecoes` — as injecoes registradas NESTE aplicativo;
+//    2. ⛔ `p.dosesCarregamentoFeitas` — CAMPO DO FORMULARIO «Editar ficha»
+//       (`ed-doses`), preenchivel por qualquer usuaria, e que NAO cria item em
+//       `p.injecoes`. E o caminho natural do paciente que chega de outro servico
+//       JA COM doses de carregamento feitas — e e `getDosesFeitas` quem governa
+//       `emCarregamento`, a fase de intervalo mais curto do programa;
+//    3. `p.ultimaInjecao` — campo independente, que entra VERBATIM pela carga; e
+//       a coluna obvia de uma importacao de historico.
+// ⛔ Ler UMA testemunha punha o paciente EM FASE DE CARREGAMENTO sem data no
+//    bloco administrativo, que CORTA — e a ficha dele dizia «Dose 3/3» e «sem
+//    primeira aplicacao» na MESMA tela.
+// ⚠️ Uma FONTE, tres consumidores: `getAlertas`, `resumoSemData` e o cracha.
+// ⛔ D-413 §2 — decisao do Edu: passados 30 dias, «dados a completar» VIRA
+//    urgencia. Abaixo disso fica onde esta. A constante e nomeada.
+const DIAS_PARA_URGENCIA_COMPLETAR = 30;
+
+// ⛔ D-413 §4 — o relogio NAO existe para toda a coorte, e isto e LIMITACAO:
+//    `criadoEm` so e escrito no cadastro DESTE aplicativo, e `dataInicio` e a
+//    data da primeira aplicacao, que para esta coorte e tipicamente vazia — e o
+//    que a define. O IMPORTADO pode nao ter nenhum dos dois.
+// ⛔ Sem relogio, devolve `null` e o paciente NAO sobe. ⚠️ A polaridade foi
+//    ESCOLHIDA: subir sem relogio poria a coorte importada inteira no topo no
+//    primeiro dia, que e exatamente o que o D-412 decidiu nao fazer.
+function diasDeCadastro(p){
+  const ref = (p.criadoEm && isValidDate(p.criadoEm)) ? p.criadoEm
+            : (p.dataInicio && isValidDate(p.dataInicio)) ? p.dataInicio : '';
+  if(!ref) return null;
+  return -daysDiff(ref);
+}
+
+// ⛔ D-414 §3 — decisao do Edu: «a correcao NAO APAGA OU EDITA o evento passado no
+//    LOG, ela ACRESCENTA o que foi mudado e com sua respectiva justificativa».
+// ⛔ O aplicativo VIOLAVA isto: as quatro escritas de sistema moravam em `p.obs`,
+//    e «Editar ficha» CARREGA e SOBRESCREVE `p.obs` por inteiro — qualquer usuario
+//    apagava o historico, sem confirmacao e sem rastro, num campo que mostra duas
+//    linhas de um texto que cresce (AP04).
+// ⛔ `p.trilha` e APPEND-ONLY e NENHUM formulario a edita. `p.obs` continua a ser
+//    o que sempre foi: PROSA do operador, editavel.
+// ⚠️ A separacao e o conteudo da decisao: enquanto os dois viviam no mesmo campo,
+//    nenhuma varredura os separava e nenhuma retencao alcancava um sem o outro.
+function registrarTrilha(p, texto){
+  if(!texto) return;
+  p.trilha = (p.trilha ? p.trilha + ' | ' : '') + texto;
+}
+
+function jaRecebeuInjecao(p){
+  if(p.injecoes && p.injecoes.length) return true;
+  if(getDosesFeitas(p) > 0) return true;
+  if(p.ultimaInjecao && isValidDate(p.ultimaInjecao)) return true;
+  return false;
+}
 function emCarregamento(p){
   if(!['3-carregamento','4-carregamento'].includes(p.protocolo)) return false;
   return getDosesFeitas(p) < dosesCarreg(p.medicacao);
@@ -928,50 +1031,184 @@ function emCarregamento(p){
 // ════════════════════════════════════════════════════
 // ALERTAS
 // ════════════════════════════════════════════════════
+// D-408 §2 — O UNIVERSO DOS ALERTAS, definido uma vez para os tres chamadores.
+// ⛔ O ramo de OCT exige `observacao` e os tres chamadores entregavam so
+//    `ativo`: mutuamente exclusivos, e por isso o ramo inteiro nunca chegou a
+//    tela. Paciente em observacao nunca recebeu aviso de OCT (GC693).
+// ⛔ SAO TRES OS RAMOS QUE NUNCA CHEGARAM A TELA, nao um (D-408 §6): o do
+//    OCT, o de `faltou` — a pessoa que PERDEU a injecao, o evento central do
+//    programa — e o de `agendado`. Os tres pela razao identica.
+// ⛔ ENTRAM `observacao`, `faltou` e `agendado`. NAO entram os estados
+//    terminais — inativo, perdido, obito, transferencia e alta: quem saiu do
+//    programa nao gera alerta (D-390).
+// ⚠️ Este universo e SO dos alertas. Os contadores do painel continuam
+//    medindo o que mediam: `ativos` e `obs` seguem calculados a parte.
+const STATUS_COM_ALERTA = ['ativo','observacao','faltou','agendado'];
+const universoAlertas = pac => pac.filter(p => STATUS_COM_ALERTA.includes(p.statusPaciente));
+
 function getAlertas(pac){
   const alertas = [];
   pac.forEach(p => {
     // Faltou → urgente
     if(p.statusPaciente==='faltou'){
-      alertas.push({tipo:'faltou', p, diff: p.proximaInjecao?daysDiff(p.proximaInjecao):0});
+      // D-410 §5 — a distincao NAO e «tem data / nao tem»: `pacienteFaltou`
+      // MANTEM a data antiga por desenho, e essa data nao e remarcacao — e a
+      // que o paciente PERDEU. Data FUTURA significa que a colaboradora AGIU.
+      // ⛔ Data PASSADA ou VAZIA => TOPO, sempre: a janela de risco nao fechou.
+      const temData = p.proximaInjecao && isValidDate(p.proximaInjecao);
+      const diffFaltou = temData ? daysDiff(p.proximaInjecao) : 0;
+      alertas.push({tipo:'faltou', p, diff: diffFaltou,
+        bloco:'urgente', prioridade: (temData && diffFaltou>0) ? 1 : 0});
+      return;
+    }
+    // D-411 §3 — SEM DATA deixa de ser invisivel. Decisao do Edu, forma (ii).
+    // ⛔ Os ramos de `ativo` e de `agendado` exigem `isValidDate`: sem data, o
+    //    paciente saia do sistema de alertas inteiro — e `confirmarAgendamento`
+    //    `confirmarAgendamento` cria esse estado com UM clique num botao verde.
+    // ⛔ A forma (ii) fecha a CLASSE, nao a porta: vale para `ativo` tambem, que
+    //    era silencioso pela razao identica e por caminho que ninguem enumerou.
+    // ⛔ `observacao` NAO entra — e outro eixo (OCT) e nao tem injecao programada.
+    //    Terminais nao entram porque `universoAlertas` ja os filtrou (D-390).
+    // ⛔ `diff:0` NAO e decorativo: a ordenacao faz `a.diff-b.diff`, e `undefined`
+    //    produz `NaN`, que desordena a LISTA INTEIRA — nao so o item.
+    // ⛔ `prioridade:0` = TOPO, ao lado de `faltou` sem remarcacao: e a MESMA
+    //    situacao clinica — janela de risco aberta e sem fim.
+    if((p.statusPaciente==='ativo'||p.statusPaciente==='agendado')
+       && !(p.proximaInjecao && isValidDate(p.proximaInjecao))){
+      // ⛔ D-412 §1 — decisao do Edu: a coorte que NUNCA recebeu injecao ALERTA,
+      //    e NAO como urgencia. As duas situacoes nao sao a mesma:
+      //    · JA TEM injecao e perdeu a data => janela de risco ABERTA, cada dia
+      //      conta => topo, nunca cortado;
+      //    · NENHUMA injecao => CADASTRO INCOMPLETO, trabalho administrativo.
+      //      Tratar isso como emergencia clinica GASTA o topo do painel, que e o
+      //      recurso mais escasso da tela.
+      // ⚠️ O predicado e o MESMO que `getGrupo` ja usa para o grupo `semdata`:
+      //    o aplicativo sabia distinguir a coorte e o alerta nao usava a distincao.
+      // ⚠️ `p.injecoes` e normalizado para vetor na carga (:796), logo o teste e seguro.
+      if(jaRecebeuInjecao(p)){
+        alertas.push({tipo:'sem-data', p, diff:0, bloco:'urgente', prioridade:0});
+      } else {
+        // ⛔ D-413 §2 — 30 dias de cadastro sem data SOBEM para o bloco urgente,
+        //    que nunca corta. ⚠️ `prioridade` fica no default (1): cadastro
+        //    antigo e urgente, e nao passa a frente de quem perdeu a injecao.
+        const dias = diasDeCadastro(p);
+        const velho = dias !== null && dias >= DIAS_PARA_URGENCIA_COMPLETAR;
+        alertas.push({tipo:'dados-a-completar', p, diff:0, dias,
+          bloco: velho ? 'urgente' : 'completar'});
+      }
       return;
     }
     // Ativos com próxima injeção
     if(p.statusPaciente==='ativo' && p.proximaInjecao && isValidDate(p.proximaInjecao)){
       const diff = daysDiff(p.proximaInjecao);
       const aguard = p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
-      if(aguard)   { alertas.push({tipo:'confirmacao',p,diff}); return; }
-      if(diff<0)   { alertas.push({tipo:'atrasado',p,diff}); return; }
-      if(diff<=7)  { alertas.push({tipo:'upcoming',p,diff}); return; }
+      if(aguard)   { alertas.push({tipo:'confirmacao',p,diff,bloco:'urgente'}); return; }
+      // D-362 PEÇA 1 — a pendência de autorização é calculada ANTES dos returns e VIAJA
+      // com o alerta. Os ramos `atrasado` e `upcoming` retornam antes do bloco de
+      // autorização, e por isso engoliam a pendência: 8 pessoas medidas em 2026-09-17.
+      const authPend = p.tipo==='convenio' && p.statusAuthInj!=='autorizado';
+      // D-363 §6 — `authPend` é `!== autorizado`, logo inclui NEGADO e inclui vazio.
+      // O título diz o predicado do REGISTRO — «não confirmada» —, verdadeiro nos três
+      // casos; e o botão de autorizar NÃO aparece para quem está negado, porque um
+      // clique ali reescreveria a negativa do convênio sem ato do convênio (GC695).
+      const authNegada = p.statusAuthInj==='negado';
+      if(diff<0)   { alertas.push({tipo:'atrasado',p,diff,authPend,authNegada,bloco:'urgente'}); return; }
+      // ⛔ Alerta com NEGADA nunca corta, qualquer que seja o tipo (D-410 §4).
+      if(diff<=7)  { alertas.push({tipo:'upcoming',p,diff,authPend,authNegada,bloco:authNegada?'urgente':'proximos'}); return; }
       // ⚠️ Alerta autorização pendente (só injeção necessária)
       if(diff<=14 && p.tipo==='convenio'){
         const injOk = p.statusAuthInj==='autorizado';
         if(!injOk){
-          // ≤7 dias → urgente vermelho; ≤14 dias → amarelo
-          const tipoAlerta = diff<=7 ? 'auth-urgente' : 'auth-pendente';
-          alertas.push({tipo:tipoAlerta, p, diff});
+          // Este bloco só é alcançado entre 8 e 14 dias — abaixo de 8 o ramo
+          // `upcoming` já retornou, e ele agora carrega a pendência combinada (D-362).
+          alertas.push({tipo:'auth-pendente', p, diff, authNegada, bloco:authNegada?'urgente':'proximos'});
         }
       }
     }
     // Agendados — lembrar que está aguardando procedimento
     if(p.statusPaciente==='agendado' && p.proximaInjecao && isValidDate(p.proximaInjecao)){
       const diff = daysDiff(p.proximaInjecao);
-      if(diff<=7) alertas.push({tipo:'agendado-proximo',p,diff});
+      // ⛔ UNICO tipo cortavel sem guarda inferior: `diff<=7` inclui TODO
+      //    negativo. Agendamento que JA PASSOU e «ja deu errado», nao «vem ai».
+      if(diff<=7) alertas.push({tipo:'agendado-proximo',p,diff,bloco:diff<0?'urgente':'proximos'});
     }
     // Observação — alerta de autorização OCT pendente (14 dias)
     if(p.statusPaciente==='observacao'){
       const proxOCT = p.proximoOCTObservacao||p.proximoOCT||'';
       if(proxOCT && isValidDate(proxOCT)){
         const diff = daysDiff(proxOCT);
-        if(diff<0)  { alertas.push({tipo:'oct-atrasado',p,diff}); return; }
-        if(diff<=14 && p.tipo==='convenio' && p.statusAuthOCT!=='autorizado'){
-          alertas.push({tipo:'oct-auth-pendente',p,diff});
+        // D-407 §2 (2) + D-410 §6 — a pendencia do eixo do OCT e calculada ANTES
+        // do return, como a da injecao ja era: sem isto, o paciente cujo OCT
+        // atrasou PORQUE o convenio negou via «OCT atrasado N dias» e mais nada.
+        const authOCTPend = p.tipo==='convenio' && p.statusAuthOCT!=='autorizado';
+        const authOCTNegada = p.statusAuthOCT==='negado';
+        if(diff<0)  { alertas.push({tipo:'oct-atrasado',p,diff,authOCTPend,authOCTNegada,bloco:'urgente'}); return; }
+        if(diff<=14 && authOCTPend){
+          alertas.push({tipo:'oct-auth-pendente',p,diff,authOCTPend,authOCTNegada,bloco:authOCTNegada?'urgente':'proximos'});
         }
-        if(diff<=7) alertas.push({tipo:'oct-proximo',p,diff});
+        if(diff<=7) alertas.push({tipo:'oct-proximo',p,diff,bloco:'proximos'});
       }
     }
   });
-  return alertas.sort((a,b)=>a.diff-b.diff);
+  // D-410 §5 — `prioridade` 0 vai ao TOPO qualquer que seja o `diff`; dentro de
+  // cada faixa a ordem continua por proximidade. ⚠️ Default 1 (normal) para
+  // alerta que nao declare prioridade.
+  const ordemDe = a => (a.prioridade===0 ? 0 : 1);
+  return alertas.sort((a,b)=>(ordemDe(a)-ordemDe(b))||(a.diff-b.diff));
+}
+
+// D-407 §2 (1) — A SUBLINHA diz o ESTADO DO REGISTRO e encaminha a quem decide.
+// ⛔ Ela NAO sugere conduta: recorrer, passar a particular ou remarcar sao
+//    escolha de quem atende, com o paciente (D-365 §7) — e o sistema nao sabe o
+//    motivo da negativa.
+// ⚠️ O paciente NEGADO continua aparecendo no alerta: muda o que a linha DIZ,
+//    nunca deixa de exibi-lo. O TITULO nao muda em ramo nenhum — D-363 §6 segue
+//    vivo, e o titulo e o predicado do REGISTRO.
+function subAuth(negada, eixo, conv, pendenteTxt){
+  const c = conv||'convênio';
+  const txt = negada
+    ? `${eixo}: ⛔ autorização NEGADA por ${c} — levar ao médico que atende`
+    : pendenteTxt;
+  return `<div style="font-size:11px;margin-top:2px">${txt}</div>`;
+}
+
+// D-411 §10 (GC703, GC704) — FONTE UNICA do texto de «sem data».
+// ⛔ O cartao e a ficha CHAMAM esta funcao: o acoplamento que o D-407 §2 (3)
+//    exige deixa de ser «o mesmo literal escrito em dois arquivos» e passa a ser
+//    estrutural. Divergir passa a exigir editar aqui, e aqui e um lugar so.
+// ⛔ GC703 — a frase NAO afirma mais «ninguem sabe quando este paciente volta»
+//    sem olhar: `proximaConsulta` e `proximoOCT` sao campos INDEPENDENTES de
+//    `proximaInjecao`, e `voltarTratamento` devolve o paciente a `ativo`
+//    mantendo a consulta que `salvarObservacao` marcou. A afirmacao absoluta era
+//    FALSA justamente para a coorte mais comum do alerta novo.
+// ⛔ GC704 — «em tratamento» e falso para quem nunca recebeu injecao: o que falta
+//    nele e a PRIMEIRA aplicacao, que e a que abre o carregamento.
+function resumoSemData(p){
+  const temInj = jaRecebeuInjecao(p);
+  const ag = p.statusPaciente==='agendado';
+  // ⛔ D-412 §1 — `completar` e o MESMO predicado do ramo de `getAlertas`: e ele
+  //    que decide o TITULO, e titulo divergente entre painel e ficha e o RQ1
+  //    outra vez. Uma fonte, dois consumidores.
+  const completar = !temInj;
+  const titulo = completar ? 'DADOS A COMPLETAR' : 'SEM DATA de próxima injeção';
+  const estagio = ag
+    ? (temInj ? 'Agendado, sem dia marcado' : 'Agendado, sem dia marcado e sem primeira aplicação')
+    : (temInj ? 'Em tratamento, sem retorno marcado' : 'Sem primeira aplicação registrada');
+  const outras = [];
+  if(p.proximaConsulta && isValidDate(p.proximaConsulta)) outras.push('consulta em ' + fmtDate(p.proximaConsulta));
+  if(p.proximoOCT && isValidDate(p.proximoOCT)) outras.push('OCT em ' + fmtDate(p.proximoOCT));
+  // ⛔ D-413 §2 — a coorte passou a ter relogio, e a frase o DIZ: sem isto o
+  //    cadastro de hoje e o de tres meses leem-se exatamente igual.
+  const dias = diasDeCadastro(p);
+  const idade = (completar && dias !== null && dias > 0) ? ` — há ${dias} dia(s) no cadastro` : '';
+  const frase = completar
+    ? (outras.length
+        ? 'Falta a data da PRIMEIRA aplicação — já marcado: ' + outras.join(' · ')
+        : 'Cadastro sem data de primeira aplicação — completar os dados') + idade
+    : (outras.length
+        ? 'Sem data de INJEÇÃO — já marcado: ' + outras.join(' · ') + ' — definir a data da injeção'
+        : 'Nenhuma data marcada neste paciente — definir a data');
+  return {completar, titulo, estagio, frase, outras};
 }
 
 function renderAlertasBanner(container,alertas){
@@ -982,14 +1219,16 @@ function renderAlertasBanner(container,alertas){
       <div class="ab-title">${p.nome} — faltou à consulta/injeção</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · Data: ${fmtDate(p.proximaInjecao)}</div>
       <div class="ab-actions">
-        <button class="btn btn-sm btn-success" onclick="confirmarAgendamento('${p.id}')">📅 Reagendar</button>
+        <button class="btn btn-sm btn-success" onclick="abrirEditarDatas('${p.id}')">📅 Reagendar</button>
         <button class="btn btn-sm btn-primary" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
     if(a.tipo==='atrasado') return `<div class="alert-banner alert-overdue"><div class="ab-icon">⚠️</div><div class="ab-body">
-      <div class="ab-title">${p.nome} — injeção com ${Math.abs(a.diff)} dia(s) de atraso</div>
+      <div class="ab-title">${p.nome} — injeção com ${Math.abs(a.diff)} dia(s) de atraso${a.authPend?' — ⚠️ AUTORIZAÇÃO NÃO CONFIRMADA':''}</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · Programada: ${fmtDate(p.proximaInjecao)}</div>
+      ${a.authPend?subAuth(a.authNegada,'Injeção',p.convenio,`Injeção: ⏳ autorização não confirmada — ${p.convenio||'convênio'}`):''}
       <div class="ab-actions">
+        ${a.authPend&&!a.authNegada?`<button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>`:''}
         <button class="btn btn-sm btn-danger" onclick="marcarConfirmacao('${p.id}')">❓ Perguntar se realizou</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
@@ -1000,31 +1239,37 @@ function renderAlertasBanner(container,alertas){
         <button class="btn btn-sm btn-danger" onclick="pacienteNaoFez('${p.id}')">🔄 Reagendar</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
-    if(a.tipo==='auth-urgente') return `<div class="alert-banner alert-overdue"><div class="ab-icon">🚨</div><div class="ab-body">
-      <div class="ab-title">🚨 ${p.nome} — AUTORIZAÇÃO URGENTE (injeção em ${a.diff} dia(s))</div>
-      <div>${p.diagnostico} · ${medBadge(p.medicacao)} · ${p.convenio||'Convênio'}</div>
-      <div style="font-size:11px;margin-top:2px">Injeção: ⏳ Pendente — ligar para o convênio HOJE</div>
-      <div class="ab-actions">
-        <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>
-        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
-      </div></div></div>`;
     if(a.tipo==='auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📋</div><div class="ab-body">
-      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — autorização pendente (injeção em ${a.diff} dias)</div>
+      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — AUTORIZAÇÃO NÃO CONFIRMADA (injeção em ${a.diff} dias)</div>
       <div>${p.diagnostico} · ${medBadge(p.medicacao)} · ${p.convenio||'Convênio'}</div>
-      <div style="font-size:11px;margin-top:2px">Injeção: ⏳ Pendente — solicitar ao convênio</div>
+      ${subAuth(a.authNegada,'Injeção',p.convenio,'Injeção: ⏳ Pendente — solicitar ao convênio')}
       <div class="ab-actions">
-        <button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>
+        ${!a.authNegada?`<button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>`:''}
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
     if(a.tipo==='oct-auth-pendente') return `<div class="alert-banner" style="border-left-color:#f59e0b;background:#fffbeb"><div class="ab-icon">📷</div><div class="ab-body">
-      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — autorização OCT pendente (${a.diff} dias)</div>
+      <div class="ab-title" style="color:#92400e">⚠️ ${p.nome} — AUTORIZAÇÃO OCT NÃO CONFIRMADA (${a.diff} dias)</div>
       <div>${p.diagnostico} · Em observação · ${p.convenio||'Convênio'}</div>
+      ${subAuth(a.authOCTNegada,'OCT',p.convenio,'OCT: ⏳ Pendente — solicitar ao convênio')}
       <div class="ab-actions">
-        <button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓ Autorizar OCT</button>
+        ${!a.authOCTNegada?`<button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓ Autorizar OCT</button>`:''}
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
     if(a.tipo==='oct-atrasado') return `<div class="alert-banner alert-overdue"><div class="ab-icon">📷</div><div class="ab-body">
-      <div class="ab-title">${p.nome} — OCT atrasado ${Math.abs(a.diff)} dia(s)</div>
+      <div class="ab-title">${p.nome} — OCT atrasado ${Math.abs(a.diff)} dia(s)${a.authOCTPend?' — ⚠️ AUTORIZAÇÃO OCT NÃO CONFIRMADA':''}</div>
+      <div>${p.diagnostico} · Em observação</div>
+      ${a.authOCTPend?subAuth(a.authOCTNegada,'OCT',p.convenio,`OCT: ⏳ autorização não confirmada — ${p.convenio||'convênio'}`):''}
+      <div class="ab-actions">
+        ${a.authOCTPend&&!a.authOCTNegada?`<button class="btn btn-sm btn-success" onclick="setAuthOCT('${p.id}','autorizado')">✓ Autorizar OCT</button>`:''}
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
+      </div></div>`;
+    // D-410 §4 (1) — MODELO PROPRIO do `oct-proximo`. Sem ele o alerta caia no
+    // `default` e dizia «injeção em N dias» com medicacao e lateralidade, para
+    // paciente EM OBSERVACAO, que por definicao NAO tem injecao programada — e
+    // `salvarObservacao` zera `proximaInjecao`, entao a data saia «—».
+    // ⛔ Diz OCT, imprime a data do OCT, e NAO imprime medicacao nem lateralidade.
+    if(a.tipo==='oct-proximo') return `<div class="alert-banner alert-upcoming"><div class="ab-icon">📷</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — OCT em ${a.diff} dia(s) — ${fmtDate(p.proximoOCTObservacao||p.proximoOCT)}</div>
       <div>${p.diagnostico} · Em observação</div>
       <div class="ab-actions"><button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
       </div></div>`;
@@ -1036,10 +1281,35 @@ function renderAlertasBanner(container,alertas){
         <button class="btn btn-sm btn-danger" onclick="pacienteFaltou('${p.id}')">✗ Faltou</button>
         <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
       </div></div></div>`;
-    return `<div class="alert-banner alert-upcoming"><div class="ab-icon">🔔</div><div class="ab-body">
-      <div class="ab-title">${p.nome} — injeção em ${a.diff} dia(s) — ${fmtDate(p.proximaInjecao)}</div>
+    // D-411 §4 — MODELO PROPRIO do `sem-data`. Sem ele o alerta cai no `default`,
+    // que imprime «injeção em N dia(s) — DATA» — e a DATA e justamente a que nao
+    // existe. E a classe do GC693 e a do modelo do `oct-proximo`: ramo novo sem
+    // modelo proprio MENTE com a forma do ramo antigo.
+    // ⛔ D-412 §5 — `dados-a-completar` entra no MESMO ramo do `sem-data`, e nao
+    //    num ramo novo: os dois cartoes dizem a MESMA coisa em campos diferentes,
+    //    e um ramo separado seria duas redacoes do mesmo texto a divergir com o
+    //    tempo. ⚠️ O que muda entre eles vem TODO da fonte unica.
+    if(a.tipo==='sem-data' || a.tipo==='dados-a-completar'){
+      const r = resumoSemData(p);
+      const urg = a.tipo==='sem-data';
+      return `<div class="alert-banner ${urg?'alert-overdue':'alert-upcoming'}"><div class="ab-icon">${urg?'📌':'📋'}</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — ${r.titulo}</div>
+      <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)} · ${r.estagio}</div>
+      <div style="font-size:11px;margin-top:2px">${r.frase}</div>
+      <div class="ab-actions">
+        <button class="btn btn-sm btn-success" onclick="abrirEditarDatas('${p.id}')">📅 Definir data</button>
+        <button class="btn btn-sm btn-primary" onclick="abrirInjecao('${p.id}')">💉 Registrar injeção</button>
+        ${a.bloco==='urgente'&&a.tipo==='dados-a-completar'?`<button class="btn btn-sm btn-slate" onclick="abrirInativar('${p.id}','perdido')">👤 Perdeu seguimento</button>`:''}
+        <button class="btn btn-sm btn-outline" onclick="verDetalhe('${p.id}')">Ver ficha</button>
+      </div></div></div>`;
+    }
+    return `<div class="alert-banner ${a.authPend?'alert-overdue':'alert-upcoming'}"><div class="ab-icon">${a.authPend?'🚨':'🔔'}</div><div class="ab-body">
+      <div class="ab-title">${p.nome} — injeção em ${a.diff} dia(s) — ${fmtDate(p.proximaInjecao)}${a.authPend?' — ⚠️ AUTORIZAÇÃO NÃO CONFIRMADA':''}</div>
       <div>${p.diagnostico} · ${p.lateral} · ${medBadge(p.medicacao)}</div>
-      <div class="ab-actions"><button class="btn btn-sm btn-info" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
+      ${a.authPend?subAuth(a.authNegada,'Injeção',p.convenio,`Injeção: ⏳ autorização não confirmada — ${p.convenio||'convênio'}`):''}
+      <div class="ab-actions">
+        ${a.authPend&&!a.authNegada?`<button class="btn btn-sm btn-success" onclick="setAuthInj('${p.id}','autorizado')">✓ Autorizar injeção</button>`:''}
+        <button class="btn btn-sm btn-info" onclick="verDetalhe('${p.id}')">Ver ficha</button></div>
       </div></div>`;
   }).join('');
 }
@@ -1047,6 +1317,75 @@ function renderAlertasBanner(container,alertas){
 // ════════════════════════════════════════════════════
 // SALVAR (sempre atualiza cache + persiste no Sheets)
 // ════════════════════════════════════════════════════
+// D-410 §4 — O PAINEL EM DOIS BLOCOS.
+// ⛔ O bloco de cima NUNCA corta. O de baixo corta em CINCO — escolha do Edu
+//    sobre ilustracao (D-410 §3 B) — e diz o numero escondido EM NUMERO:
+//    cauda silenciosa le-se igual a cauda vazia (regra 13).
+// ⛔ DEFAULT FAIL-SAFE: alerta que nao declare `bloco` cai no que NUNCA corta.
+//    Tipo novo esquecido aparece demais, nunca de menos. ⚠️ Os blocos CORTAVEIS
+//    sao nomeados em `BLOCOS_CORTAVEIS`, e o teste e a NEGACAO dessa lista —
+//    acrescentar bloco cortavel exige edita-la; acrescentar tipo NAO exige nada.
+// ⚠️ `renderAlertasBanner` continua recebendo UMA LISTA, sem mudanca de
+//    assinatura: a separacao e responsabilidade de quem chama.
+const CORTE_PROXIMOS = 5;
+
+// ⛔ D-412 §2 — TRES blocos. O DEFAULT FAIL-SAFE fica INTACTO e e o que torna
+//    isto seguro: o teste e «NAO e um dos cortaveis», NUNCA uma lista de nomes
+//    de blocos urgentes. Tipo novo que esqueca de declarar `bloco` continua
+//    caindo no que NUNCA corta — aparece demais, nunca de menos (regra 10:
+//    aqui nao se mantem uma lista que outra coisa teria de atualizar).
+const BLOCOS_CORTAVEIS = ['proximos','completar'];
+
+function separarBlocos(alertas){
+  return {
+    urgentes:  alertas.filter(a=>!BLOCOS_CORTAVEIS.includes(a.bloco)),
+    proximos:  alertas.filter(a=>a.bloco==='proximos'),
+    completar: alertas.filter(a=>a.bloco==='completar'),
+  };
+}
+
+// D-411 §2 — O CORTE E PARAMETRO, e o DEFAULT e NAO CORTAR.
+// ⛔ A polaridade e fail-safe, a mesma do default de `bloco`: chamador novo que
+//    esqueca de passar mostra DEMAIS, nunca de menos.
+// ⛔ O painel passa `CORTE_PROXIMOS` explicitamente; a PAGINA nao passa nada e
+//    mostra os N. Antes disto os dois chamavam esta funcao sem parametro e
+//    aplicavam o MESMO corte: a cauda nao existia em lugar nenhum do aplicativo.
+function renderPainelAlertas(container, alertas, corte){
+  const limite = (typeof corte === 'number' && corte >= 0) ? corte : Infinity;
+  const {urgentes, proximos, completar} = separarBlocos(alertas);
+  container.innerHTML='';
+  const bloco=(titulo,lista)=>{
+    const t=document.createElement('div');
+    t.className='bloco-al-tit'; t.textContent=titulo;
+    const d=document.createElement('div');
+    container.appendChild(t); container.appendChild(d);
+    renderAlertasBanner(d,lista);
+  };
+  // ⛔ O «+N» e CONTROLE, nao legenda: sem destino o corte esconde o paciente de
+  //    TODAS as listas do aplicativo (D-411 §2). ⚠️ Vale para os DOIS cortaveis,
+  //    e por isso e UMA funcao — duas copias divergiriam, e a segunda nasceria
+  //    sem `onclick`, que foi exatamente o defeito que o guardiao apanhou.
+  const cortavel=(titulo,lista,sufixo)=>{
+    if(!lista.length) return;
+    const mostrados = Math.min(lista.length, limite);
+    bloco(titulo, lista.slice(0, mostrados));
+    const escondidos = lista.length - mostrados;
+    if(escondidos>0){
+      const m=document.createElement('button');
+      m.className='bloco-al-mais';
+      m.type='button';
+      m.textContent='+'+escondidos+' '+sufixo+' — ver todos';
+      m.onclick = () => navigate('alertas');
+      container.appendChild(m);
+    }
+  };
+  if(urgentes.length) bloco('⚠️ Precisa de ação', urgentes);
+  cortavel('🔔 Vem aí', proximos, 'nos próximos dias');
+  // ⛔ D-412 §2 — o bloco NOVO e o mais abaixo, e e o unico de tamanho
+  //    POTENCIALMENTE ILIMITADO: uma importacao inteira cai aqui de uma vez.
+  cortavel('📋 Dados a completar', completar, 'com dados a completar');
+}
+
 async function persistir(p, isNovo) {
   setSyncStatus('saving');
   try {
@@ -1139,7 +1478,7 @@ async function salvarNovoPaciente(){
     statusAuthInj:tipo==='convenio'?'pendente':'n/a',
     aguardandoConfirmacao:false, modoObservacao:false,
     proximoOCTObservacao:'', statusPaciente:'ativo',
-    inativoMotivo:'', inativoData:'', inativoObs:'',
+    inativoMotivo:'', inativoData:'', inativoObs:'', inativoSubmotivo:'', trilha:'',
     dosesCarregamentoFeitas:0, injecoes:[], ativo:true, criadoEm:todayStr(),
     valorAplicacao: tipo==='particular' ? (parseFloat(document.getElementById('np-valor').value)||0) : 0
   };
@@ -1227,16 +1566,60 @@ function verDetalhe(id){
   document.getElementById('det-titulo').textContent=`👁️ ${p.nome}`;
   const isInat=['inativo','perdido','obito'].includes(p.statusPaciente);
   const isObs=p.statusPaciente==='observacao';
-  const diff=p.proximaInjecao&&p.proximaInjecao!==''?daysDiff(p.proximaInjecao):null;
+  // D-411 §11 (RQ1) — ⛔ o teste era `!== ''`, e o painel testa VALIDADE.
+  // Para `proximaInjecao = 'a combinar'` o `daysDiff` devolvia NaN, nao null:
+  // `NaN<0` e `NaN<=7` sao ambos falsos, a cadeia inteira caia fora e a ficha
+  // ficava MUDA enquanto o painel gritava «SEM DATA» — a lei do D-407 §2 (3)
+  // quebrada no ato em que a passagem a declarava cumprida.
+  // ⛔ Data ilegivel entra pela CARGA: `:791-797` normaliza status e injecoes,
+  //    e nao toca em data nenhuma. Celula de planilha entra verbatim.
+  const diff=p.proximaInjecao&&isValidDate(p.proximaInjecao)?daysDiff(p.proximaInjecao):null;
   const aguard=p.aguardandoConfirmacao===true||p.aguardandoConfirmacao==='true';
   const cfg=UNIDADES[unidadeAtual];
 
+  // D-365 §6 — SUB-PASSO DA PEÇA 1: a ficha monta banner PRÓPRIO, fora de getAlertas,
+  // e por isso ficou muda quando os alertas passaram a dizer a pendência (GC692).
+  // É a tela que o médico abre imediatamente antes de decidir injetar.
+  const authPendFicha = p.tipo==='convenio' && p.statusAuthInj!=='autorizado';
+  const sufAuth = authPendFicha ? ' — ⚠️ AUTORIZAÇÃO NÃO CONFIRMADA' : '';
+  // D-407 §2 (3) — a FICHA entra na unidade de trabalho: e a tela que o medico
+  // abre imediatamente antes de decidir injetar (D-365 §8), e alerta e ficha tem
+  // de dizer a MESMA coisa sobre a MESMA pessoa.
+  // ⛔ O TITULO nao muda (`sufAuth` intacto) — D-363 §6 segue vivo. A distincao
+  //    pendente x negado entra na SUBLINHA, e ela nao sugere conduta (D-365 §7).
+  const authNegadaFicha = p.tipo==='convenio' && p.statusAuthInj==='negado';
+  const subAuthFicha = authNegadaFicha
+    ? `<div style="font-size:11px;margin-top:2px">Injeção: ⛔ autorização NEGADA por ${p.convenio||'convênio'} — levar ao médico que atende</div>`
+    : '';
   let alertHtml='';
-  if(aguard) alertHtml=`<div class="alert-banner alert-confirm" style="margin-bottom:12px"><div class="ab-icon">❓</div><div class="ab-body"><div class="ab-title">Aguardando confirmação da injeção de ${fmtDate(p.proximaInjecao)}</div></div></div>`;
-  else if(!isInat&&!isObs&&diff!==null&&diff<0) alertHtml=`<div class="alert-banner alert-overdue" style="margin-bottom:12px"><div class="ab-icon">⚠️</div><div class="ab-body"><div class="ab-title">Injeção com ${Math.abs(diff)} dia(s) de atraso!</div></div></div>`;
-  else if(!isInat&&!isObs&&diff!==null&&diff<=7) alertHtml=`<div class="alert-banner alert-upcoming" style="margin-bottom:12px"><div class="ab-icon">🔔</div><div class="ab-body"><div class="ab-title">Injeção em ${diff} dia(s) — contatar paciente</div></div></div>`;
+  // D-411 §10 (GC707) — «sem data» e testado ANTES de `aguard`, na MESMA ordem do
+  // painel (`getAlertas`, o ramo `sem-data` vem antes do ramo `confirmacao`).
+  // ⛔ A razao: `marcarConfirmacao` liga a marca SEM exigir data, e nesse estado o
+  //    banner de confirmacao perguntaria «aguardando confirmação da injeção de —».
+  //    Pergunta sobre uma data que nao existe nao e pergunta.
+  // ⛔ E a lei do D-407 §2 (3): alerta e ficha dizem a MESMA coisa sobre a MESMA
+  //    pessoa. Ordens invertidas produziam DUAS frases diferentes para um estado
+  //    alcancavel em aplicativo.
+  // ⛔ D-412 §9 (GC719) — `faltou` SEM data caia fora de TODA a cadeia: `diff` e
+  //    null, `aguard` e falso, `isObs` e `isInat` sao falsos. A ficha ficava sem
+  //    banner E sem caixa de datas — e ele e `prioridade 0` desde o D-410 §5, o
+  //    evento central do programa. A colaboradora clicava «Ver ficha» no cartao
+  //    vermelho do topo e a ficha nao mencionava falta nenhuma.
+  if(!isInat&&!isObs&&diff===null&&p.statusPaciente==='faltou'){
+    alertHtml=`<div class="alert-banner alert-overdue" style="margin-bottom:12px"><div class="ab-icon">✗</div><div class="ab-body"><div class="ab-title">FALTOU — e sem data nova marcada</div><div style="font-size:11px;margin-top:2px">Nenhuma data de retorno marcada — definir a data</div></div></div>`;
+  }
+  else if(!isInat&&!isObs&&diff===null&&['ativo','agendado'].includes(p.statusPaciente)){
+    const rSD = resumoSemData(p);
+    // ⛔ D-412 §5 — o TITULO vem da fonte unica. Escrever «SEM DATA» aqui a fixo
+    //    faria a ficha dizer urgencia onde o painel diz «dados a completar»:
+    //    e o RQ1 de novo, uma rodada depois, no artefato que o corrigiu.
+    alertHtml=`<div class="alert-banner ${rSD.completar?'alert-upcoming':'alert-overdue'}" style="margin-bottom:12px"><div class="ab-icon">${rSD.completar?'📋':'📌'}</div><div class="ab-body"><div class="ab-title">${rSD.titulo}</div><div>${rSD.estagio}</div><div style="font-size:11px;margin-top:2px">${rSD.frase}</div></div></div>`;
+  }
+  else if(aguard) alertHtml=`<div class="alert-banner alert-confirm" style="margin-bottom:12px"><div class="ab-icon">❓</div><div class="ab-body"><div class="ab-title">Aguardando confirmação da injeção de ${fmtDate(p.proximaInjecao)}</div></div></div>`;
+  else if(!isInat&&!isObs&&diff!==null&&diff<0) alertHtml=`<div class="alert-banner alert-overdue" style="margin-bottom:12px"><div class="ab-icon">⚠️</div><div class="ab-body"><div class="ab-title">Injeção com ${Math.abs(diff)} dia(s) de atraso!${sufAuth}</div>${subAuthFicha}</div></div>`;
+  else if(!isInat&&!isObs&&diff!==null&&diff<=7) alertHtml=`<div class="alert-banner alert-upcoming" style="margin-bottom:12px"><div class="ab-icon">🔔</div><div class="ab-body"><div class="ab-title">Injeção em ${diff} dia(s) — contatar paciente${sufAuth}</div>${subAuthFicha}</div></div>`;
   else if(isObs) alertHtml=`<div class="alert-banner alert-observe" style="margin-bottom:12px"><div class="ab-icon">🔍</div><div class="ab-body"><div class="ab-title">Protocolo de Observação — Próximo OCT: ${fmtDate(p.proximoOCTObservacao||p.proximoOCT)}</div></div></div>`;
-  else if(isInat){ const lbs={inativo:'Inativo',perdido:'Perda de seguimento',obito:'Óbito',transferencia:'Transferência',alta:'Alta médica'}; alertHtml=`<div class="alert-banner" style="margin-bottom:12px;background:#f1f5f9;border-color:#cbd5e1;color:#475569"><div class="ab-icon">■</div><div class="ab-body"><div class="ab-title">${lbs[p.inativoMotivo]||p.statusPaciente} ${p.inativoData?'· '+fmtDate(p.inativoData):''}</div><div>${p.inativoObs||''}</div></div></div>`; }
+  else if(isInat){ const lbs={inativo:'Inativo',perdido:'Perda de seguimento',obito:'Óbito',transferencia:'Transferência',alta:'Alta médica'}; alertHtml=`<div class="alert-banner" style="margin-bottom:12px;background:#f1f5f9;border-color:#cbd5e1;color:#475569"><div class="ab-icon">■</div><div class="ab-body"><div class="ab-title">${lbs[p.inativoMotivo]||p.statusPaciente} ${p.inativoData?'· '+fmtDate(p.inativoData):''}</div><div>${[esc(p.inativoSubmotivo), esc(p.inativoObs)].filter(Boolean).join(' · ')}</div></div></div>`; }
 
   let datasBox='';
   if(!isInat&&!isObs&&p.proximaInjecao&&isValidDate(p.proximaInjecao)){
@@ -1252,6 +1635,20 @@ function verDetalhe(id){
   } else if(isObs){
     const proxObs=p.proximoOCTObservacao||p.proximoOCT||'';
     datasBox=`<div class="next-date-box"><div class="ndb-item"><div class="ndb-l">📷 Próximo OCT + Consulta</div><div class="ndb-d">${fmtDate(proxObs)}</div><div class="ndb-w">${diaSemStr(proxObs)}</div></div><div class="ndb-sep"></div><div class="ndb-item"><div class="ndb-l">Protocolo</div><div class="ndb-d" style="font-size:12px">Observar e Estender</div><div class="ndb-w">Sem injeção programada</div></div></div>`;
+  } else if(!isInat&&['ativo','agendado','faltou'].includes(p.statusPaciente)){
+    // D-411 §10 (GC703) — a ficha do paciente SEM data ficava EM BRANCO, e era a
+    // unica tela que mostraria a consulta que ele JA TEM marcada. O painel gritava
+    // «sem data» e a ficha nao desmentia nem confirmava: risco de marcar duas vezes
+    // ou de perder a consulta que o protocolo de observacao calculou.
+    datasBox=`<div class="next-date-box">
+      <div class="ndb-item"><div class="ndb-l">💉 Próxima Injeção</div><div class="ndb-d" style="color:var(--red)">SEM DATA</div><div class="ndb-w">a definir</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">🩺 Consulta</div><div class="ndb-d">${fmtDate(p.proximaConsulta)}</div><div class="ndb-w">${diaSemStr(p.proximaConsulta)}</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">📷 OCT</div><div class="ndb-d">${fmtDate(p.proximoOCT)}</div><div class="ndb-w">${diaSemStr(p.proximoOCT)}</div></div>
+      <div class="ndb-sep"></div>
+      <div class="ndb-item"><div class="ndb-l">🏥 Unidade</div><div class="ndb-d" style="font-size:12px">${cfg.nome}</div><div class="ndb-w">${cfg.diaLabel}s</div></div>
+    </div>`;
   }
 
   const dosesFeitas=getDosesFeitas(p);
@@ -1276,7 +1673,8 @@ function verDetalhe(id){
       <div class="detail-item"><div class="di-l">📷 Auth. OCT</div><div class="di-v">${authOCTBadge(p)}</div></div>
       <div class="detail-item"><div class="di-l">💉 Auth. Injeção</div><div class="di-v">${authInjBadge(p)}</div></div>
     </div>
-    ${p.obs&&p.obs!==''?`<div style="background:#f8f9fc;border-radius:6px;padding:8px 11px;font-size:12px;color:var(--gray);margin-bottom:11px">📝 ${p.obs}</div>`:''}
+    ${p.obs&&p.obs!==''?`<div style="background:#f8f9fc;border-radius:6px;padding:8px 11px;font-size:12px;color:var(--gray);margin-bottom:11px">📝 ${esc(p.obs)}</div>`:''}
+    ${p.trilha&&p.trilha!==''?`<div style="background:#fbf8f1;border:1px solid #e8dcc0;border-radius:6px;padding:8px 11px;font-size:11.5px;color:#6b5a2e;margin-bottom:11px">🕓 <strong>Histórico</strong> — registro do sistema, não editável<br>${esc(p.trilha).split(' | ').join('<br>')}</div>`:''}
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gold);margin-bottom:7px">Histórico de Injeções</div>
     ${injHist.length?injHist.map((inj,idx)=>`<div class="inject-row">
       <div><div style="font-weight:600">💉 ${inj.olho} — ${inj.med}
@@ -1298,22 +1696,43 @@ function verDetalhe(id){
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:12px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">📷 Auth. OCT:</span>
         ${authOCTBadge(p)}
-        <button class="btn btn-sm ${p.statusAuthOCT==='autorizado'?'btn-success':'btn-outline'}" onclick="toggleAuthOCT('${p.id}')">
-          ${p.statusAuthOCT==='autorizado'?'✓ Autorizado':'Marcar como autorizado'}
-        </button>
+        <span class="slot-auth-oct"></span>
       </div>
       <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
         <span style="font-size:12px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px">💉 Auth. Injeção:</span>
         ${authInjBadge(p)}
-        <button class="btn btn-sm ${p.statusAuthInj==='autorizado'?'btn-success':'btn-outline'}" onclick="toggleAuthInj('${p.id}')">
-          ${p.statusAuthInj==='autorizado'?'✓ Autorizado':'Marcar como autorizado'}
-        </button>
+        <span class="slot-auth-inj"></span>
       </div>
     </div>`:''}`;
 
+  // D-407 §2 (4) — a ficha monta o campo de autorizacao em DOM, depois do
+  // innerHTML: os ouvintes de roda, teclado e confirmacao vivem no elemento, e
+  // atributo `onclick` em texto nao os carregaria.
+  if(p.tipo==='convenio'){
+    const slotOCT=document.querySelector('#det-body .slot-auth-oct');
+    if(slotOCT) slotOCT.appendChild(authSelect(setAuthOCT,p.id,p.statusAuthOCT,'Autorização do OCT'));
+    const slotInj=document.querySelector('#det-body .slot-auth-inj');
+    if(slotInj) slotInj.appendChild(authSelect(setAuthInj,p.id,p.statusAuthInj,'Autorização da injeção'));
+  }
+
   // Botão editar datas (antes do fechar)
   let footer=`<button class="btn btn-outline btn-sm" onclick="closeModal('modal-det')">Fechar</button>`;
-  if(!isInat && p.proximaInjecao && isValidDate(p.proximaInjecao)){
+  // D-411 §10 (GC702) — ⛔ o portao EXIGIA ter data, que e a NEGACAO exata do
+  // paciente de quem o banner desta mesma ficha fala. A ficha mandava «definir a
+  // data» e era a UNICA tela do aplicativo sem porta para a tela de datas —
+  // `abrirEditar` nao tem campo de data nenhum. O que sobrava para clicar era
+  // «✗ Paciente faltou», que grava falta de uma consulta que nunca foi marcada.
+  // ⛔ D-411 §11 (RQ4) — a guarda e POR ESTADO, nunca `!isInat`: `isInat` e
+  //    ['inativo','perdido','obito'], TRES dos CINCO terminais, e deixava
+  //    `transferencia` e `alta` ganharem um botao que grava `proximaInjecao`
+  //    em quem saiu do programa — dado escrito sem superficie que o consuma.
+  //    O `datasBox`, criado no MESMO ato para o MESMO conceito, ja guardava
+  //    por estado: duas guardas divergentes para a mesma nocao.
+  // ⚠️ `faltou` ENTRA: e o estado de quem precisa exatamente de data nova, e
+  //    a ficha dele tambem nao tinha porta para a tela de datas.
+  if(['ativo','agendado','faltou'].includes(p.statusPaciente) && !(p.proximaInjecao && isValidDate(p.proximaInjecao))){
+    footer+=`<button class="btn btn-success btn-sm" onclick="abrirEditarDatas('${p.id}')">📅 Definir data</button>`;
+  } else if(!isInat && p.proximaInjecao && isValidDate(p.proximaInjecao)){
     footer+=`<button class="btn btn-outline btn-sm" onclick="abrirEditarDatas('${p.id}')" style="border-color:var(--blue);color:var(--blue)">📅 Ajustar datas</button>`;
   }
   footer+=`<button class="btn btn-warn btn-sm" onclick="abrirEditar('${p.id}')">✏️ Editar ficha</button>`;
@@ -1347,24 +1766,6 @@ function verDetalhe(id){
   }
   document.getElementById('det-footer').innerHTML=footer;
   openModal('modal-det');
-}
-
-async function toggleAuthOCT(id){
-  const p=getPac().find(x=>x.id===id); if(!p) return;
-  const opts=['pendente','autorizado','negado'];
-  if(!p.statusAuthOCT) p.statusAuthOCT='pendente';
-  p.statusAuthOCT=opts[(opts.indexOf(p.statusAuthOCT)+1)%opts.length];
-  atualizarCache(p); renderAll(); verDetalhe(id);
-  await persistir(p,false);
-}
-
-async function toggleAuthInj(id){
-  const p=getPac().find(x=>x.id===id); if(!p) return;
-  const opts=['pendente','autorizado','negado'];
-  if(!p.statusAuthInj) p.statusAuthInj='pendente';
-  p.statusAuthInj=opts[(opts.indexOf(p.statusAuthInj)+1)%opts.length];
-  atualizarCache(p); renderAll(); verDetalhe(id);
-  await persistir(p,false);
 }
 
 // ════════════════════════════════════════════════════
@@ -1569,7 +1970,12 @@ async function pacienteNaoFez(id){
 // ════════════════════════════════════════════════════
 function atualizarInfoObs(){
   const data=document.getElementById('obs-ultinj').value;
-  const interv=parseInt(document.getElementById('obs-interv').value)||8;
+  // ⛔ D-414 §14 (GC742) — o literal do padrao ANTIGO sobrevivia aqui, no ramo de
+  //    recuperacao, enquanto `salvarObservacao` nao tem recuperacao nenhuma: o
+  //    previsor caía para um valor e o gravador para outro. ⚠️ Regra vencida no
+  //    corpo e codigo errado esperando para ser escrito — sai, e as duas funcoes
+  //    passam a ler o MESMO valor, sem default proprio.
+  const interv=parseInt(document.getElementById('obs-interv').value);
   if(!data) return;
   const d=calcDatasObs(data,interv);
   document.getElementById('obs-info').innerHTML=`<div class="info-box" style="color:#0f766e"><strong>🔍 Observar e Estender</strong><br>📷 Próximo OCT + Consulta: <strong>${fmtFull(d.proxOCT)}</strong></div>`;
@@ -1582,7 +1988,11 @@ function abrirObservacao(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
   document.getElementById('obs-pac').value=p.nome;
   document.getElementById('obs-ultinj').value=p.ultimaInjecao||todayStr();
-  document.getElementById('obs-interv').value='8';
+  // ⛔ D-414 §11 — decisao do Edu: o padrao e QUATRO semanas, nao oito. O defeito
+  //    que o GC727 mediu nao era o botao existir — era o intervalo abrir em 8 e a
+  //    lista nao ter nada abaixo de 4, o que tirava do painel, por ~7 semanas e com
+  //    um clique, ate o paciente em fase de carregamento.
+  document.getElementById('obs-interv').value='4';
   document.getElementById('obs-motivo').value='';
   atualizarInfoObs();
   closeModal('modal-det'); openModal('modal-observacao');
@@ -1596,7 +2006,7 @@ async function salvarObservacao(){
   p.statusPaciente='observacao'; p.modoObservacao=true;
   p.proximoOCTObservacao=d.proxOCT; p.proximaConsulta=d.proxConsulta;
   p.proximaInjecao=''; p.aguardandoConfirmacao=false;
-  p.obs=(p.obs&&p.obs!==''?p.obs+' | ':'')+`Obs: ${document.getElementById('obs-motivo').value} (${todayStr()})`;
+  registrarTrilha(p, `Em observação desde ${todayStr()} — ${document.getElementById('obs-motivo').value}`);
   atualizarCache(p); closeModal('modal-observacao'); renderAll();
   showToast(`🔍 ${p.nome} — protocolo de observação iniciado`);
   await persistir(p,false);
@@ -1617,7 +2027,10 @@ function abrirInativar(id,preMotivo){
   currentId=id;
   const p=getPac().find(x=>x.id===id); if(!p) return;
   document.getElementById('inat-pac').value=p.nome;
-  document.getElementById('inat-motivo').value=preMotivo||'perdido';
+  // ⛔ D-413 §9 (AP01) — NAO ha pre-selecao. O defeito que o §3 nomeou era o
+  //    motivo vir ESCOLHIDO; pre-selecionar «perdido» a partir do botao repetia-o.
+  document.getElementById('inat-motivo').value='';
+  document.getElementById('inat-submotivo').value='';
   document.getElementById('inat-data').value=todayStr();
   document.getElementById('inat-obs').value='';
   updateInatMotivo();
@@ -1628,14 +2041,64 @@ function updateInatMotivo(){
   const m=document.getElementById('inat-motivo').value;
   document.getElementById('inat-titulo').textContent=m==='obito'?'✝ Registrar Óbito':'Inativar Paciente';
   document.getElementById('inat-btn').textContent=m==='obito'?'✝ Confirmar Óbito':'Confirmar Inativação';
+  // ⛔ D-198 — a sub-lista de «perda de seguimento» e FIXA, e o texto livre existe
+  //    so no «outro». O Edu decidiu isto para TODAS as justificativas do sistema.
+  document.getElementById('inat-sub-row').style.display = m==='perdido' ? '' : 'none';
+  // ⛔ D-413 §11 (RQ22) — a exigencia passa a ser ANUNCIADA antes do clique. Ate
+  //    aqui a colaboradora descobria a regra por um aviso DEPOIS de confirmar.
+  const sub=document.getElementById('inat-submotivo').value;
+  const exige = m==='outro' || (m==='perdido' && sub==='outro');
+  document.getElementById('inat-obs-req').style.display = exige ? '' : 'none';
 }
 
 async function salvarInativacao(){
   const p=getPac().find(x=>x.id===currentId); if(!p) return;
-  const motivo=document.getElementById('inat-motivo').value;
+  const motivoEl=document.getElementById('inat-motivo');
+  const motivo=motivoEl.value;
+  // ⛔ D-414 §14 (GC740) — D-198 §1 vale para o MOTIVO tambem: guarda-se o TEXTO
+  //    DO DIA, nao a chave. Vinte e cinco linhas abaixo ja se fazia isto para o
+  //    sub-motivo; o motivo escrevia `perdido`, `alta` — a chave — num bloco que
+  //    a ficha rotula «registro do sistema». Editar a lista tornaria o passado
+  //    ilegivel, que e o que o D-198 §1 existe para impedir.
+  const motivoTexto=(motivoEl.selectedIndex>=0 && motivo!=='')
+    ? (motivoEl.options[motivoEl.selectedIndex].textContent||'').trim() : '';
+  // ⛔ D-413 §3 — decisao do Edu: o paciente so sai do alerta «apenas depois que
+  //    o motivo foi listado». ⚠️ Ate aqui o motivo NAO era preenchido — vinha
+  //    PRE-SELECIONADO, a data vinha com hoje e a observacao era opcional: UM
+  //    clique tirava o paciente da fila sem ninguem escrever uma palavra.
+  // ⚠️ ESCOLHA DO EXECUTOR: `obito`, `transferencia` e `alta` NAO exigem texto,
+  //    porque o proprio motivo ja diz o que aconteceu. «Perda de seguimento» e
+  //    «Outro» nao dizem nada sozinhos — sao os dois que precisam da frase.
+  const obsInat=(document.getElementById('inat-obs').value||'').trim();
+  const subEl=document.getElementById('inat-submotivo');
+  // ⛔ D-198 §1 — a opcao escolhida CONGELA no registro: guarda-se o TEXTO DO DIA,
+  //    nao a chave. Editar a lista depois NAO reescreve o passado.
+  const subTexto=(subEl && subEl.selectedIndex>=0 && subEl.value!=='')
+    ? (subEl.options[subEl.selectedIndex].textContent||'').trim() : '';
+  if(!motivo){
+    showToast('⚠️ Escolha o motivo — o paciente não sai da lista sem ele');
+    return;
+  }
+  // ⛔ D-413 §9 (AP01) — «apenas depois que o motivo foi LISTADO». A escolha
+  //    explicita numa lista FIXA cumpre a palavra do Edu e NAO coleta prosa.
+  //    Texto livre so onde a lista nao alcanca, que e o «outro» (D-198 §2).
+  if(motivo==='perdido' && subEl.value===''){
+    showToast('⚠️ Escolha por que o paciente perdeu o seguimento');
+    return;
+  }
+  const exigeTexto = motivo==='outro' || (motivo==='perdido' && subEl.value==='outro');
+  if(exigeTexto && !obsInat){
+    showToast('⚠️ Descreva o motivo na Observação — sem isso o paciente não sai da lista');
+    return;
+  }
   p.statusPaciente=motivo==='obito'?'obito':motivo==='perdido'?'perdido':'inativo';
   p.inativoMotivo=motivo; p.inativoData=document.getElementById('inat-data').value;
-  p.inativoObs=document.getElementById('inat-obs').value; p.aguardandoConfirmacao=false;
+  p.inativoSubmotivo=subTexto; p.inativoObs=obsInat; p.aguardandoConfirmacao=false;
+  // ⛔ D-414 §11 — decisao do Edu: «sem duvidas deve ficar no LOG. Inativacao e um
+  //    STATUS de como o paciente esta. Ele pode retornar quando necessario.»
+  // ⚠️ Estado que pode voltar atras e exatamente o que precisa de log: a VOLTA
+  //    tem de poder ser lida contra a IDA (GC725).
+  registrarTrilha(p, `Inativado em ${p.inativoData||todayStr()} — ${[motivoTexto, subTexto, obsInat].filter(Boolean).join(' · ')}`);
   atualizarCache(p); closeModal('modal-inativar'); renderAll();
   showToast(`${p.nome} — inativado`);
   await persistir(p,false);
@@ -1643,7 +2106,11 @@ async function salvarInativacao(){
 
 async function reativar(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
-  p.statusPaciente='ativo'; p.inativoMotivo=''; p.inativoData=''; p.inativoObs='';
+  // ⛔ D-414 §3 item 4 — o campo VIVO diz o estado de hoje; a TRILHA diz o que
+  //    houve. Limpar em silencio apagava o evento passado, que e o que a decisao
+  //    do Edu proibe.
+  registrarTrilha(p, `Reativado em ${todayStr()} — antes: ${[p.inativoMotivo, p.inativoSubmotivo, p.inativoObs].filter(Boolean).join(' · ')||'sem motivo registrado'}`);
+  p.statusPaciente='ativo'; p.inativoMotivo=''; p.inativoData=''; p.inativoObs=''; p.inativoSubmotivo='';
   atualizarCache(p); closeModal('modal-det'); renderAll();
   showToast(`↩ ${p.nome} — reativado`);
   await persistir(p,false);
@@ -1656,13 +2123,14 @@ function renderDashboard(){
   const pac=getPac();
   const ativos=pac.filter(p=>p.statusPaciente==='ativo');
   const obs=pac.filter(p=>p.statusPaciente==='observacao');
-  const alertas=getAlertas(ativos);
+  const alertas=getAlertas(universoAlertas(pac));
   document.getElementById('stat-total').textContent=ativos.length;
   document.getElementById('stat-atrasados').textContent=ativos.filter(p=>getStatus(p)==='atrasado').length;
   document.getElementById('stat-semana').textContent=ativos.filter(p=>getStatus(p)==='esta-semana').length;
   document.getElementById('stat-observe').textContent=obs.length;
   document.getElementById('stat-emdia').textContent=ativos.filter(p=>getStatus(p)==='em-dia').length;
-  renderAlertasBanner(document.getElementById('dash-alertas-container'),alertas.slice(0,5));
+  // D-411 §2 — o PAINEL corta; a PAGINA (renderAlertasPage) nao passa corte.
+  renderPainelAlertas(document.getElementById('dash-alertas-container'),alertas,CORTE_PROXIMOS);
   const urgentes=ativos.filter(p=>['atrasado','confirmacao','esta-semana'].includes(getStatus(p))).sort((a,b)=>new Date(a.proximaInjecao)-new Date(b.proximaInjecao));
   const uDiv=document.getElementById('dash-urgentes');
   if(!urgentes.length){uDiv.innerHTML='<div class="empty"><span class="ei">✅</span><p>Nenhuma urgência</p></div>';}
@@ -1676,11 +2144,12 @@ function renderDashboard(){
 }
 
 function renderAlertasPage(){
-  const pac=getPac().filter(p=>p.statusPaciente==='ativo');
+  const pac=universoAlertas(getPac());
   const alertas=getAlertas(pac);
   const div=document.getElementById('alertas-content');
   if(!alertas.length){div.innerHTML='<div class="empty"><span class="ei">🔔</span><p>Nenhum alerta</p></div>';return;}
-  renderAlertasBanner(div,alertas);
+  // D-411 §2 — SEM corte: esta e a tela de destino do «+N» do painel.
+  renderPainelAlertas(div,alertas);
 }
 
 // ── Edição de injeções + frasco individual
@@ -2050,11 +2519,27 @@ async function salvarEditarDatas(){
   if(dtCon) p.proximaConsulta=dtCon;
   if(dtOCT) p.proximoOCT=dtOCT;
   if(dtOCTObs) p.proximoOCTObservacao=dtOCTObs;
+  // D-410 §3 (A-bis) — gravar data NOVA e FUTURA para quem esta em `faltou`
+  // devolve o paciente a `agendado`. ⛔ SO com data futura: passada ou vazia
+  // MANTEM `faltou`, porque a janela de risco nao fechou.
+  // ⚠️ Esta tela serve a VARIOS estados — a guarda por `statusPaciente` e o
+  //    que impede qualquer outro paciente de mudar de estado sem querer.
+  let voltouAAgendado=false;
+  if(p.statusPaciente==='faltou' && dtInj && isValidDate(dtInj) && daysDiff(dtInj)>=0){
+    p.statusPaciente='agendado';
+    voltouAAgendado=true;
+    // D-411 §10 (GC710) — ⛔ TRILHA. A mudanca de estado acontece por efeito
+    // colateral de uma tela chamada «datas»: quem le o historico depois nao tem
+    // como saber que o paciente esteve em `faltou`. `pacienteFaltou` ja escreve a
+    // sua linha; esta e a linha do outro lado da transicao.
+    // ⛔ Rastreabilidade e area protegida (docs/policies/regras-clinicas.md).
+    registrarTrilha(p, `Reagendado em ${todayStr()} para ${fmtDate(dtInj)} (estava como faltou)`);
+  }
   atualizarCache(p);
   closeModal('modal-datas');
   renderAll();
   await persistir(p,false);
-  showToast(`📅 ${p.nome} — datas atualizadas`);
+  showToast(voltouAAgendado ? `📅 ${p.nome} — reagendado` : `📅 ${p.nome} — datas atualizadas`);
 }
 
 // ── Fracionamento de frasco
@@ -2157,9 +2642,21 @@ async function confirmarAgendamento(id){
 // ── Paciente faltou
 async function pacienteFaltou(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
-  if(!confirm(`Confirmar que ${p.nome} faltou à consulta/injeção?\nA data será mantida para reagendamento.`)) return;
+  // D-411 §10 (GC702) — ⛔ a frase «a data será mantida» e FALSA para quem nao
+  // tem data, e este botao e alcancavel a partir da ficha do paciente sem data.
+  // ⚠️ CORRECAO (AP04): a redacao anterior deste comentario dizia que `p.obs` nao
+  // tem caminho de correcao. E FALSO — «Editar ficha» sobrescreve o campo inteiro.
+  // ⛔ O que continua verdade e o dano: afirmar falta de uma consulta que nunca
+  // foi marcada e dado de paciente escrito errado, item 3 da hierarquia.
+  const _temDataFaltou = p.proximaInjecao && isValidDate(p.proximaInjecao);
+  const _aviso = _temDataFaltou
+    ? `Confirmar que ${p.nome} faltou à consulta/injeção?\nA data (${fmtDate(p.proximaInjecao)}) será mantida para reagendamento.`
+    : `⚠️ ${p.nome} NÃO TEM data de próxima injeção marcada.\n\nNão há consulta a que ele possa ter faltado. Marcar «faltou» aqui grava no histórico uma falta que não tem data, e isso não se apaga pelo aplicativo.\n\nSe o que falta é marcar a data, use «📅 Definir data».\n\nMarcar como faltou mesmo assim?`;
+  if(!confirm(_aviso)) return;
   p.statusPaciente='faltou';
-  p.obs = (p.obs?p.obs+' | ':'') + `Faltou em ${todayStr()}`;
+  registrarTrilha(p, _temDataFaltou
+    ? `Faltou em ${todayStr()}`
+    : `Faltou em ${todayStr()} (registrado sem data de injeção marcada)`);
   atualizarCache(p); closeModal('modal-det'); renderAll();
   await persistir(p,false);
   showToast(`⚠️ ${p.nome} — marcado como faltou`);
@@ -2168,13 +2665,23 @@ async function pacienteFaltou(id){
 // ── Resgatar paciente (perda de seguimento → urgente)
 async function resgatar(id){
   const p=getPac().find(x=>x.id===id); if(!p) return;
-  if(!confirm(`Resgatar ${p.nome}?\nEle será marcado como urgente para contato e reagendamento.`)) return;
+  if(!confirm(`Resgatar ${p.nome}?\nEle volta para o acompanhamento e entra na lista de contato e reagendamento.`)) return;
+  // ⛔ D-414 §9 (GC724) — a TRILHA vem ANTES do apagamento, como em `reativar`.
+  //    A primeira redacao limpava os tres campos e escrevia uma linha que nao
+  //    carregava nenhum deles — na passagem que PROIBIU apagar.
+  // ⛔ «Resgatar» e o botao que se usa quando se vai LIGAR para quem sumiu, e e
+  //    nesse momento que quem liga precisa saber se ele mudou de cidade, se nao
+  //    atende, se recusou ou se esta internado. O clique apagava isso ANTES da
+  //    chamada acontecer — e depois do D-414 §2 esse dado era para ser permanente.
+  registrarTrilha(p, `Resgatado em ${todayStr()} — antes: ${[p.inativoMotivo, p.inativoSubmotivo, p.inativoObs].filter(Boolean).join(' · ')||'sem motivo registrado'}`);
   p.statusPaciente='ativo';
-  p.inativoMotivo=''; p.inativoData=''; p.inativoObs='';
+  // ⚠️ `inativoSubmotivo` entra na limpeza: sem ele o paciente ficava `ativo` com
+  //    um sub-motivo de inativacao VIVO e o motivo apagado — o unico fragmento
+  //    que sobrevivia era o que ninguem tinha pensado em limpar (GC724).
+  p.inativoMotivo=''; p.inativoData=''; p.inativoObs=''; p.inativoSubmotivo='';
   p.aguardandoConfirmacao=false;
   // Limpar datas antigas para forçar atenção urgente
   p.proximaInjecao=''; p.proximaConsulta=''; p.proximoOCT='';
-  p.obs = (p.obs?p.obs+' | ':'') + `Resgatado em ${todayStr()} — reagendar consulta`;
   // Para convênio resetar autorizações
   if(p.tipo==='convenio'){ p.statusAuthOCT='pendente'; p.statusAuthInj='pendente'; }
   atualizarCache(p); closeModal('modal-det'); renderAll();
@@ -2203,15 +2710,24 @@ function getGrupo(p){
   // 3. Observação
   if(p.statusPaciente === 'observacao') return 'obs';
 
-  // 4. Agendado
-  if(p.statusPaciente === 'agendado') return 'ok';
-
-  const temInjecoes = p.injecoes && p.injecoes.length > 0;
+  // ⛔ D-414 §1 — decisao do Edu: «se paciente esta em dose de carregamento, ele
+  //    NAO tem dados a completar». «Completar Dados» e grupo ADMINISTRATIVO; quem
+  //    ja injeta e perdeu a data tem DATA A MARCAR, e esta na fase de intervalo
+  //    mais curto do programa.
+  // ⛔ O teste de data vem ANTES do ramo de `agendado`: sem isto o `agendado` sem
+  //    data continuava em «Agendamento confirmado — aguardando dia», afirmando um
+  //    dia que nao existe (TAR-GRUPO-OK-SEM-DATA).
+  // ⚠️ `jaRecebeuInjecao` e a MESMA fonte do alerta e do cracha: `getGrupo` era a
+  //    unica das QUATRO superficies com predicado proprio, e dai vieram RQ15 e RQ16.
+  const temInjecoes = jaRecebeuInjecao(p);
   const temProxData = p.proximaInjecao && isValidDate(p.proximaInjecao);
+  if(!temProxData) return temInjecoes ? 'urgente' : 'semdata';
+
+  // 4. Agendado — COM data. Sem data ele nao chega aqui.
+  if(p.statusPaciente === 'agendado') return 'ok';
 
   // 5. Convênio: verificar autorização ANTES de qualquer outra coisa
   if(p.tipo === 'convenio'){
-    if(!temInjecoes && !temProxData) return 'semdata';
     const statusC = getStatus(p);
     if(statusC === 'atrasado' || statusC === 'confirmacao' || statusC === 'faltou') return 'urgente';
     const isObs = p.statusPaciente === 'observacao';
@@ -2222,8 +2738,7 @@ function getGrupo(p){
     return 'agendar';
   }
 
-  // 6. Particular
-  if(!temInjecoes && !temProxData) return 'semdata';
+  // 6. Particular — sem data ja retornou acima (D-414 §1).
   const status = getStatus(p);
   if(status === 'atrasado' || status === 'confirmacao') return 'urgente';
   if(status === 'esta-semana' || status === 'em-dia') return 'agendar';
@@ -2381,22 +2896,67 @@ function renderAgenda(){
   div.innerHTML=Object.entries(byDate).map(([date,evts])=>`<div class="agenda-day"><div class="agenda-day-label">${fmtFull(date)}</div>${evts.map(e=>`<div class="agenda-item" style="border-color:${e.color}"><div><div style="font-weight:600">${e.p.nome} ${latBadge(e.p.lateral)}</div><div style="font-size:11px;color:var(--gray)">${e.label} · ${e.p.diagnostico} · ${e.p.medico}</div></div><div style="display:flex;gap:5px;align-items:center">${tipoBadge(e.p.tipo)}${statusBadge(e.p)}<button class="btn btn-sm btn-outline" onclick="verDetalhe('${e.p.id}')">Ver</button></div></div>`).join('')}</div>`).join('');
 }
 
+// ────────────────────────────────────────────────
+// D-407 §2 (4)(5)(6)(7) — O CAMPO DE AUTORIZACAO, unico na ficha e na lista.
+// O estado passa a ser LIDO como rotulo no proprio controle, em vez de depender
+// de um clique cego que avancava os tres estados em ciclo.
+// ⛔ Ele so e liberado com as duas travas abaixo, e elas sao a condicao pela
+//    qual a troca na lista foi aprovada — sem elas o saldo clinico seria pior
+//    que nao mexer (D-407 §2 (5)).
+// ────────────────────────────────────────────────
+function authSelect(fn, id, atual, rotulo){
+  const anterior = atual || 'pendente';
+  const sel = document.createElement('select');
+  sel.className = 'sel-auth';
+  sel.setAttribute('aria-label', rotulo);
+  [['pendente','⏳ Pendente'],['autorizado','✓ Autorizado'],['negado','✗ Negado']]
+    .forEach(([v,t])=>{
+      const o=document.createElement('option');
+      o.value=v; o.textContent=t;
+      if(v===anterior) o.selected=true;
+      sel.appendChild(o);
+    });
+
+  // ⛔ VETOR 1 — RODA DO MOUSE. O campo PERDE O FOCO e o evento SEGUE
+  //    PROPAGANDO. ⚠️ Sem `preventDefault`: ele criaria zona morta de rolagem
+  //    sobre cada linha — 42 pacientes, dois campos por linha (D-407 §2 (6)).
+  sel.addEventListener('wheel', ()=>{ sel.blur(); });
+
+  // ⛔ VETORES 2 e 3 — SETA e TECLA DE LETRA. As duas trocam o valor de um
+  //    campo com foco e gravam na hora, sem a lista sequer abrir. Aqui elas
+  //    deixam de ser caminho de escrita (D-407 §2 (6)).
+  // ⚠️ LIMITE DECLARADO: isto tira o teclado como forma de escolher a opcao.
+  //    Alt+Seta continua abrindo a lista, e Tab/Enter/Esc seguem normais.
+  sel.addEventListener('keydown', e=>{
+    if(e.altKey||e.ctrlKey||e.metaKey) return;
+    const navega = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown'];
+    if(navega.includes(e.key) || (e.key && e.key.length===1)) e.preventDefault();
+  });
+
+  // ⛔ CONFIRMACAO ASSIMETRICA — so para SAIR de «negado», nas duas direcoes.
+  //    ENTRAR em «negado» NAO confirma, e nenhuma outra transicao confirma:
+  //    confirmar as 42 linhas treina a clicar OK sem ler, e ai a confirmacao
+  //    deixa de proteger a unica transicao que importa (D-407 §2 (7)).
+  sel.addEventListener('change', ()=>{
+    const novo = sel.value;
+    if(anterior==='negado' && novo!=='negado'){
+      const efeito = novo==='autorizado'
+        ? 'Trocar para AUTORIZADO faz o sistema afirmar uma autorização que o convênio recusou.'
+        : 'Trocar para PENDENTE apaga o registro da recusa e manda solicitar de novo o que já foi respondido.';
+      if(!confirm('A autorização deste paciente está NEGADA.\n\n'+efeito+'\n\nConfirmar a troca?')){
+        sel.value = anterior;
+        return;
+      }
+    }
+    fn(id, novo);
+  });
+  return sel;
+}
+
 function renderAutorizacoes(){
   const pac=getPac().filter(p=>['ativo','observacao','agendado','faltou'].includes(p.statusPaciente)&&p.tipo==='convenio');
   const div=document.getElementById('table-auth');
   if(!pac.length){div.innerHTML='<div class="empty"><span class="ei">📋</span><p>Nenhum paciente convênio</p></div>';return;}
-
-  function authBtns(fn, id){
-    return ['autorizado','negado','pendente'].map((s,i)=>{
-      const cls=['btn-success','btn-danger','btn-outline'][i];
-      const lbl=['✓','✗','⏳'][i];
-      const btn=document.createElement('button');
-      btn.className='btn btn-sm '+cls;
-      btn.textContent=lbl;
-      btn.onclick=()=>fn(id,s);
-      return btn;
-    });
-  }
 
   const tbody = document.createElement('tbody');
   pac.forEach(p=>{
@@ -2418,7 +2978,7 @@ function renderAutorizacoes(){
     const tdOCT = tr.querySelector('.td-oct');
     const wrapOCT = document.createElement('div');
     wrapOCT.style='display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
-    authBtns(setAuthOCT, p.id).forEach(b=>wrapOCT.appendChild(b));
+    wrapOCT.appendChild(authSelect(setAuthOCT,p.id,p.statusAuthOCT,'Autorização do OCT'));
     tdOCT.appendChild(wrapOCT);
 
     // Add Inj auth buttons (only for non-observation)
@@ -2426,7 +2986,7 @@ function renderAutorizacoes(){
       const tdINJ = tr.querySelector('.td-inj');
       const wrapINJ = document.createElement('div');
       wrapINJ.style='display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
-      authBtns(setAuthInj, p.id).forEach(b=>wrapINJ.appendChild(b));
+      wrapINJ.appendChild(authSelect(setAuthInj,p.id,p.statusAuthInj,'Autorização da injeção'));
       tdINJ.appendChild(wrapINJ);
     }
 
@@ -2451,20 +3011,33 @@ function renderAutorizacoes(){
   div.appendChild(table);
 }
 
+// D-407 §2 (8) — O REDESENHO. As duas funcoes abaixo redesenhavam SO a aba de
+// autorizacoes: clicar «✓ Autorizar injeção» no banner do dashboard nao fazia o
+// alerta sumir, e o colaborador clicava de novo.
+// ⚠️ `renderAll()` cobre a secao ATIVA e os contadores; `navigate()` ja
+//    redesenha a secao ao troca-la, logo nao ha tela que fique para tras.
+// ⛔ A ficha so e redesenhada se estiver ABERTA neste mesmo paciente: chamar
+//    `verDetalhe` sem essa guarda ABRIRIA o modal para quem clicou no banner.
+function redesenharAposAuth(id){
+  renderAll();
+  const modal=document.getElementById('modal-det');
+  if(modal && modal.classList.contains('open') && currentId===id) verDetalhe(id);
+}
+
 async function setAuthOCT(id,status){
   const p=getPac().find(x=>x.id===id); if(!p) return;
-  p.statusAuthOCT=status; atualizarCache(p); renderAutorizacoes(); updateNavBadges(getPac());
+  p.statusAuthOCT=status; atualizarCache(p); redesenharAposAuth(id);
   await persistir(p,false);
 }
 
 async function setAuthInj(id,status){
   const p=getPac().find(x=>x.id===id); if(!p) return;
-  p.statusAuthInj=status; atualizarCache(p); renderAutorizacoes(); updateNavBadges(getPac());
+  p.statusAuthInj=status; atualizarCache(p); redesenharAposAuth(id);
   await persistir(p,false);
 }
 
 function updateNavBadges(pac){
-  const alertas=getAlertas(pac.filter(p=>p.statusPaciente==='ativo'));
+  const alertas=getAlertas(universoAlertas(pac));
   const authPend=pac.filter(p=>['ativo','observacao','agendado','faltou'].includes(p.statusPaciente)&&p.tipo==='convenio'&&p.statusAuthInj!=='autorizado').length;
   const setB=(id,c)=>{const el=document.getElementById(id);el.textContent=c;el.style.display=c>0?'inline-block':'none';};
   setB('nb-dashboard',alertas.length);setB('nb-alertas',alertas.length);setB('nb-auth',authPend);
@@ -2893,12 +3466,17 @@ function renderBI(){
 // ════════════════════════════════════════════════════
 // SISTEMA DE SENHAS + TELA INICIAL
 // ════════════════════════════════════════════════════
+// [SANITIZADO — D-045] O original define aqui um objeto com 4 senhas em texto
+// puro no cliente (citta, riovision, consultorio, bi), legiveis por "ver codigo-fonte".
+// Valores fora do repositorio; comprometidos desde a publicacao (D-036).
+// O comportamento — porta de senha no cliente — entra no inventario como defeito.
 const SENHAS = {
   citta:       'citta@123',
   riovision:   'rvh@123',
   consultorio: 'edu@123',
   bi:          'pipoca123'
 };
+// (bloco sanitizado — original: 6 linhas, 2899-2904 no arquivo publicado)
 
 function senhaKey(u){ return `auth_${u}_v1`; }
 function isAutenticado(u){ return sessionStorage.getItem(senhaKey(u)) === 'ok'; }
